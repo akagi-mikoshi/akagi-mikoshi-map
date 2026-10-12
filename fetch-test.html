@@ -1,0 +1,24 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fetch test</title><script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=xoD0FjQUJOvbrRhENUFVdPg_tZXuYgejg7lXAUjqKytC7CwTAq70xeSd21_Mk2cqcKvamYYcxyIljbaEtZ9-ikw-khumdGJuzIFqhBnrA5s7nbECbhqADyyJ7YOiQcq_KAGGF44IX-ztAy5Oa6CZ2_bSPLZ_sVnCoiDp4JBj71zFnHQZfXUZg_fpHPTheMkwYxKVcPlY03B_TA18R-_HHm2i9q8_5O5QBOTCAVbxNkD-onRz6ZdoXdRmlUNuLlf9wAlF-tAsOfc310q4Rg1vNxkTa0zBl4kDyjuX8vNUZrg3oXuQqGMklwp4HP3O4TIW" charset="UTF-8"></script></head><body>
+<h1>通信テスト</h1>
+<p>この画面がすぐ出たら「テスト開始」を押してください。</p>
+<button id="b">テスト開始</button>
+<pre id="o"></pre>
+<script>
+const o=document.getElementById('o');
+async function test(name,url){
+  const t=performance.now();
+  try{
+    const r=await fetch(url+'?t='+Date.now(),{cache:'no-store'});
+    const s=await r.text();
+    o.textContent+=name+': '+((performance.now()-t)/1000).toFixed(2)+'秒 / '+s.length+'文字 / HTTP '+r.status+'\n';
+  }catch(e){
+    o.textContent+=name+': 失敗 / '+e+'\n';
+  }
+}
+document.getElementById('b').onclick=async()=>{
+  o.textContent='開始\n';
+  await test('static-test','./static-test.html');
+  await test('size-test','./size-test.html');
+  o.textContent+='終了';
+};
+</script></body></html>
