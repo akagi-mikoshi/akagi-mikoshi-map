@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>表示速度テスト</title>
+  <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=eiBjaVeqc5O3Z1BaFvoL6JHPcREaTWIsj31T8y5ez3EfFX5GYgVqCmNDyBaRO1B-1WTk9Bkha46luhrYhwXan2nWR8gdEju-37tnCCt7-XSzE928_TP5PacQ81YtfmGeIeTmzROhryOx1ZUnS5X0FRE4ynu3OhCyKsM_A2UabP0tKSsuuVZJRuFn2vPR8fJAi24ICmiJzOLkxv9rZtRuDhMyDnQKCXd_A8boLg_Dv6jQU5mj_uIC5CS6Ik4NdvIkkW4qN_tZ_IdZfV5i7WoL8Ywdt04BLe8ku924f6xujyjrxbRulyxI64pbOhtjBxke" charset="UTF-8"></script><style>
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: Meiryo, sans-serif;
+      background: #fff;
+      color: #222;
+      line-height: 1.6;
+    }
+    h1 { font-size: 20px; margin: 0 0 10px; }
+    #first {
+      padding: 12px;
+      border: 1px solid #999;
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 13px;
+      background: #f6f6f6;
+      padding: 10px;
+      border: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <h1>表示速度テスト</h1>
+  <div id="first">HTML本文が表示されました。</div>
+  <pre id="log"></pre>
+
+  <script>
+    const logEl = document.getElementById('log');
+
+    function t() {
+      return (performance.now() / 1000).toFixed(2) + '秒';
+    }
+
+    function log(msg) {
+      logEl.textContent += '[' + t() + '] ' + msg + '\n';
+    }
+
+    log('インラインJavaScript実行開始');
+
+    const nav = performance.getEntriesByType('navigation')[0];
+    if (nav) {
+      log('responseStart: ' + (nav.responseStart / 1000).toFixed(2) + '秒');
+      log('responseEnd: ' + (nav.responseEnd / 1000).toFixed(2) + '秒');
+    }
+
+    function loadCss(url) {
+      return new Promise((resolve, reject) => {
+        const el = document.createElement('link');
+        el.rel = 'stylesheet';
+        el.href = url;
+        el.onload = resolve;
+        el.onerror = reject;
+        document.head.appendChild(el);
+      });
+    }
+
+    function loadJs(url) {
+      return new Promise((resolve, reject) => {
+        const el = document.createElement('script');
+        el.src = url;
+        el.async = true;
+        el.onload = resolve;
+        el.onerror = reject;
+        document.head.appendChild(el);
+      });
+    }
+
+    async function run() {
+      let s = performance.now();
+
+      try {
+        await loadCss('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css');
+        log('Leaflet CSS 読込完了（' +
+            ((performance.now() - s) / 1000).toFixed(2) + '秒）');
+      } catch (e) {
+        log('Leaflet CSS 読込失敗');
+      }
+
+      s = performance.now();
+
+      try {
+        await loadJs('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js');
+        log('Leaflet JS 読込完了（' +
+            ((performance.now() - s) / 1000).toFixed(2) + '秒）');
+      } catch (e) {
+        log('Leaflet JS 読込失敗');
+      }
+
+      log('テスト終了');
+    }
+
+    run();
+  </script>
+</body>
+</html>
