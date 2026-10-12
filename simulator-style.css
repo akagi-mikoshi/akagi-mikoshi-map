@@ -30,3 +30,25 @@ button:disabled{opacity:.48}
 .message{margin-top:10px;padding:9px;border-radius:7px;font-size:13px;background:#f0f0f0}
 .message.error{background:#fde8e7;color:#8b1e18}
 .footer{text-align:center;color:#777;font-size:11px;padding:6px 0 16px}
+
+.recovery-box{background:#fff8e1;border:3px solid #b3261e;border-radius:12px;padding:16px;margin-bottom:14px;color:#3c2200}
+.recovery-kicker{display:inline-block;background:#b3261e;color:#fff;border-radius:999px;padding:5px 10px;font-size:13px;font-weight:bold;letter-spacing:.12em;margin-bottom:10px}
+.recovery-title{font-size:20px;font-weight:bold;line-height:1.45;margin-bottom:8px;color:#7a1f18}
+.recovery-text{font-size:14px;line-height:1.75;margin-bottom:12px}
+.recovery-state{background:#fff;border:2px solid #c69419;border-radius:8px;padding:10px 12px;font-size:15px;font-weight:bold;line-height:1.5;margin-bottom:14px;color:#5f4300}
+.recovery-action{min-height:56px;font-size:18px}
+.recovery-action:disabled{opacity:.65}
+.recovery-note{font-size:12px;line-height:1.6;margin-top:9px;color:#654b24}
+
+select:disabled{opacity:1;color:#222;-webkit-text-fill-color:#222;background:#f2f2f2;border-color:#aaa}
+#startBtn:disabled{opacity:.48}
+#status.running{background:#e8f5eb;border:2px solid #2f7d46;color:#184d2a;font-weight:bold}
+#status.paused{background:#fff3cd;border:2px solid #c69419;color:#5f4300;font-weight:bold}
+#serverState{background:#fff;border:1px solid #bbb;color:#333}
+.observer-box{background:#eef6ff;border:3px solid #356f9f;border-radius:12px;padding:16px;margin-bottom:14px;color:#173a58}
+.observer-kicker{display:inline-block;background:#356f9f;color:#fff;border-radius:999px;padding:5px 10px;font-size:13px;font-weight:bold;margin-bottom:10px}
+.observer-title{font-size:19px;font-weight:bold;line-height:1.45;margin-bottom:12px}
+.observer-progress{display:grid;gap:7px;background:#fff;border:1px solid #9cb9d1;border-radius:8px;padding:10px 12px;font-size:14px}
+.observer-progress div{display:grid;grid-template-columns:92px 1fr;gap:8px}
+.observer-progress strong{color:#4a6173}
+.observer-note{font-size:12px;line-height:1.65;margin-top:10px;color:#3c5870}

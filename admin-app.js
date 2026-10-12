@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '7';
+  const VERSION = '9';
   let token = sessionStorage.getItem('mikoshiAdminToken') || '';
   let busy = false;
   let currentPublicState = false;
@@ -185,31 +185,84 @@
 
   async function login() {
     if (busy) return;
-    const password = document.getElementById('password').value;
-    if (!password) { loginMessage('パスワードを入力してください。'); return; }
 
+    const passwordBox = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+    const password = passwordBox.value;
+
+    if (!password) {
+      loginMessage('パスワードを入力してください。');
+      passwordBox.focus();
+      return;
+    }
+
+    clearLoginMessage();
     setBusy(true);
+    passwordBox.disabled = true;
+    loginBtn.textContent = '確認しています…';
+
     try {
       const c = await jsonp({ mode: 'adminChallenge' });
-      if (!c.ok || !c.nonce) throw new Error('challenge');
-      const proof = await sha256Hex(c.nonce + ':' + password);
-      document.getElementById('password').value = '';
-      const r = await jsonp({ mode: 'adminLogin', nonce: c.nonce, proof });
+
+      if (!c.ok || !c.nonce) {
+        throw new Error('challenge');
+      }
+
+      const proof = await sha256Hex(
+        c.nonce + ':' + password
+      );
+
+      const r = await jsonp({
+        mode: 'adminLogin',
+        nonce: c.nonce,
+        proof
+      });
 
       if (!r.ok) {
-        if (r.error === 'invalid_password') throw new Error('password');
-        if (r.error === 'admin_key_not_set') throw new Error('key');
+        if (r.error === 'invalid_password') {
+          throw new Error('password');
+        }
+
+        if (r.error === 'admin_key_not_set') {
+          throw new Error('key');
+        }
+
         throw new Error('login');
       }
 
       token = r.token;
-      sessionStorage.setItem('mikoshiAdminToken', token);
+      sessionStorage.setItem(
+        'mikoshiAdminToken',
+        token
+      );
+
+      // 認証成功が確定して画面を切り替えてから、
+      // 非表示になったパスワード欄を消去する。
       showAdmin(r.state);
+      passwordBox.value = '';
     } catch (e) {
-      loginMessage(e.message === 'password' ? 'パスワードが違います。' : e.message === 'key' ? 'GASに MIKOSHI_ADMIN_KEY が設定されていません。' : '認証できませんでした。');
+      loginMessage(
+        e.message === 'password'
+          ? 'パスワードが違います。入力内容を確認してください。'
+          : e.message === 'key'
+            ? 'GASに MIKOSHI_ADMIN_KEY が設定されていません。'
+            : '認証できませんでした。通信状態を確認して、もう一度お試しください。'
+      );
+
+      passwordBox.disabled = false;
+      passwordBox.focus();
+      passwordBox.select();
     } finally {
+      loginBtn.textContent = '管理画面を開く';
+      passwordBox.disabled = false;
       setBusy(false);
     }
+  }
+
+  function clearLoginMessage() {
+    const box = document.getElementById('loginBox');
+    if (!box) return;
+    box.querySelectorAll('.dynamic').forEach(x => x.remove());
   }
 
   function loginMessage(text) {

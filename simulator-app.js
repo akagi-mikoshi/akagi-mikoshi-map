@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '1';
+  const VERSION = '6';
   const SAMPLE_SPACING_M = 30;
 
   let token = sessionStorage.getItem('mikoshiAdminToken') || '';
@@ -12,6 +12,8 @@
   let callbackSeq = 0;
   let busy = false;
   let serverSimulationActive = false;
+  let observerTimer = null;
+  let observerMode = false;
 
   function loadCss(url) {
     return new Promise((resolve, reject) => {
@@ -97,35 +99,69 @@
           </div>
 
           <div id="controlBox" class="hidden">
-            <div class="field">
-              <label for="rangeSelect">テスト範囲</label>
-              <select id="rangeSelect">
-                <option value="all">全巡行路</option>
-                <option value="1">第1区間：赤城神社 → 赤城福祉会館</option>
-                <option value="2">第2区間：赤城福祉会館 → 大塚クリーニング前</option>
-                <option value="3">第3区間：大塚クリーニング前 → イトーヨーカ堂前</option>
-                <option value="4">第4区間：イトーヨーカ堂前 → 赤城神社</option>
-              </select>
+            <div id="observerBox" class="observer-box hidden" aria-live="polite">
+              <div class="observer-kicker">別端末でシミュレーション中</div>
+              <div class="observer-title" id="observerTitle">進行状況を確認しています…</div>
+              <div class="observer-progress">
+                <div><strong>テスト範囲</strong><span id="observerRange">—</span></div>
+                <div><strong>進行</strong><span id="observerProgress">—</span></div>
+                <div><strong>状態</strong><span id="observerStatus">—</span></div>
+                <div><strong>最終更新</strong><span id="observerUpdated">—</span></div>
+              </div>
+              <div class="progress"><div id="observerBar"></div></div>
+              <div class="stack" style="margin-top:12px">
+                <button id="observerMapBtn" class="outline">テスト用地図を開く（2秒更新）</button>
+                <button id="observerEndBtn" class="danger">テスト終了・初期化</button>
+              </div>
+              <div class="observer-note">
+                この端末は進行状況の確認用です。ダミーGPSの送信は、最初にテストを開始した端末だけが行います。
+              </div>
             </div>
 
-            <div class="field">
-              <label for="intervalSelect">ダミー位置の送信間隔</label>
-              <select id="intervalSelect">
-                <option value="500">0.5秒（最速）</option>
-                <option value="1000">1秒（高速）</option>
-                <option value="2000" selected>2秒（標準）</option>
-                <option value="5000">5秒</option>
-              </select>
+            <div id="recoveryBox" class="recovery-box hidden" role="alert" aria-live="assertive">
+              <div class="recovery-kicker">要 初 期 化</div>
+              <div class="recovery-title">前回のシミュレーションデータが残っています</div>
+              <div class="recovery-text">
+                サーバーではシミュレーション状態が継続しています。
+                新しいテストを始める前に、下のボタンでテストデータを消去し、
+                赤城神社の初期位置へ戻してください。
+              </div>
+              <div class="recovery-state">現在：サーバー上にテストデータあり</div>
+              <button id="recoveryEndBtn" class="danger recovery-action">テスト終了・初期化</button>
+              <div class="recovery-note">この操作で、位置表示・通過記録・シミュレーション状態を整理します。</div>
             </div>
 
-            <div class="metrics">
-              <div class="metric"><strong>ダミー位置数</strong><span id="pointCount">—</span></div>
-              <div class="metric"><strong>予定所要時間</strong><span id="duration">—</span></div>
-            </div>
+            <div id="setupBox">
+              <div class="field">
+                <label for="rangeSelect">テスト範囲</label>
+                <select id="rangeSelect">
+                  <option value="all">全巡行路</option>
+                  <option value="1">第1区間：赤城神社 → 赤城福祉会館</option>
+                  <option value="2">第2区間：赤城福祉会館 → 大塚クリーニング前</option>
+                  <option value="3">第3区間：大塚クリーニング前 → イトーヨーカ堂前</option>
+                  <option value="4">第4区間：イトーヨーカ堂前 → 赤城神社</option>
+                </select>
+              </div>
 
-            <div style="margin-top:12px" class="stack">
-              <button id="mapBtn" class="outline">テスト用地図を開く（2秒更新）</button>
-              <button id="startBtn" class="safe">テスト開始</button>
+              <div class="field">
+                <label for="intervalSelect">ダミー位置の送信間隔</label>
+                <select id="intervalSelect">
+                  <option value="500">0.5秒（最速）</option>
+                  <option value="1000">1秒（高速）</option>
+                  <option value="2000" selected>2秒（標準）</option>
+                  <option value="5000">5秒</option>
+                </select>
+              </div>
+
+              <div class="metrics">
+                <div class="metric"><strong>ダミー位置数</strong><span id="pointCount">—</span></div>
+                <div class="metric"><strong>予定所要時間</strong><span id="duration">—</span></div>
+              </div>
+
+              <div style="margin-top:12px" class="stack">
+                <button id="mapBtn" class="outline">テスト用地図を開く（2秒更新）</button>
+                <button id="startBtn" class="safe">テスト開始</button>
+              </div>
             </div>
 
             <div id="runningBox" class="hidden" style="margin-top:14px">
@@ -168,6 +204,11 @@
     document.getElementById('startBtn').onclick = startSimulation;
     document.getElementById('pauseBtn').onclick = togglePause;
     document.getElementById('endBtn').onclick = endSimulation;
+    document.getElementById('recoveryEndBtn').onclick = endSimulation;
+    document.getElementById('observerEndBtn').onclick = endSimulation;
+    document.getElementById('observerMapBtn').onclick = () => {
+      window.open('./?test=1', '_blank', 'noopener');
+    };
   }
 
   function showLogin() {
@@ -183,17 +224,32 @@
   async function login() {
     if (busy) return;
 
-    const password = document.getElementById('password').value;
+    const passwordBox =
+      document.getElementById('password');
+    const loginBtn =
+      document.getElementById('loginBtn');
+
+    const password = passwordBox.value;
 
     if (!password) {
-      loginMessage('パスワードを入力してください。', true);
+      loginMessage(
+        'パスワードを入力してください。',
+        true
+      );
+      passwordBox.focus();
       return;
     }
 
+    loginMessage('パスワードを確認しています…', false);
     busy = true;
+    passwordBox.disabled = true;
+    loginBtn.disabled = true;
+    loginBtn.textContent = '確認しています…';
 
     try {
-      const challenge = await jsonp({ mode: 'adminChallenge' });
+      const challenge = await jsonp({
+        mode: 'adminChallenge'
+      });
 
       if (!challenge.ok || !challenge.nonce) {
         throw new Error('challenge');
@@ -202,8 +258,6 @@
       const proof = await sha256Hex(
         challenge.nonce + ':' + password
       );
-
-      document.getElementById('password').value = '';
 
       const r = await jsonp({
         mode: 'adminLogin',
@@ -220,20 +274,34 @@
       }
 
       token = r.token;
-      sessionStorage.setItem('mikoshiAdminToken', token);
+      sessionStorage.setItem(
+        'mikoshiAdminToken',
+        token
+      );
 
       showControl();
       updateServerState(r.state);
       restoreServerSimulationState(r.state);
+
+      // 認証成功後、非表示になった入力欄だけ消去。
+      passwordBox.value = '';
     } catch (e) {
       loginMessage(
         e.message === 'password'
-          ? 'パスワードが違います。'
-          : '認証できませんでした。',
+          ? 'パスワードが違います。入力内容を確認してください。'
+          : '認証できませんでした。通信状態を確認して、もう一度お試しください。',
         true
       );
+
+      passwordBox.disabled = false;
+      passwordBox.focus();
+      passwordBox.select();
     } finally {
       busy = false;
+      loginBtn.disabled = false;
+      loginBtn.textContent =
+        'シミュレーション画面を開く';
+      passwordBox.disabled = false;
     }
   }
 
@@ -385,7 +453,23 @@
     setPreStartBusy(true);
 
     try {
-      const r = await adminCall('simulateStart');
+      const rangeSelect =
+        document.getElementById('rangeSelect');
+      const intervalSelect =
+        document.getElementById('intervalSelect');
+
+      const r = await adminCall(
+        'simulateStart',
+        {
+          range: rangeSelect.value,
+          rangeLabel:
+            rangeSelect.options[
+              rangeSelect.selectedIndex
+            ].textContent,
+          totalPoints: samples.length,
+          intervalMs: Number(intervalSelect.value)
+        }
+      );
 
       if (!r.ok) {
         throw new Error(r.error || 'start_failed');
@@ -439,7 +523,9 @@
           'simulatePoint',
           {
             lat: point[0].toFixed(7),
-            lon: point[1].toFixed(7)
+            lon: point[1].toFixed(7),
+            pointIndex: index + 1,
+            totalPoints: samples.length
           }
         );
 
@@ -523,6 +609,11 @@
 
       applyCompletedControls();
 
+      adminCall(
+        'simulateState',
+        { simState: 'completed' }
+      ).catch(() => {});
+
       setStatus(
         '全てのダミー位置を送信しました。地図を確認後、必ず「テスト終了・初期化」を押してください。',
         'paused'
@@ -544,6 +635,13 @@
         : 'シミュレーション中です。',
       paused ? 'paused' : 'running'
     );
+
+    adminCall(
+      'simulateState',
+      {
+        simState: paused ? 'paused' : 'running'
+      }
+    ).catch(() => {});
   }
 
   async function endSimulation() {
@@ -569,6 +667,8 @@
       }
 
       serverSimulationActive = false;
+      observerMode = false;
+      stopObserverPolling_();
       updateServerState(r.state);
 
       index = 0;
@@ -578,6 +678,13 @@
       document.getElementById('currentPos').textContent = '—';
       document.getElementById('runningBox')
         .classList.add('hidden');
+
+      const recoveryBox =
+        document.getElementById('recoveryBox');
+
+      if (recoveryBox) {
+        recoveryBox.classList.add('hidden');
+      }
 
       applyIdleControls();
 
@@ -670,7 +777,9 @@
       'mapBtn',
       'startBtn',
       'pauseBtn',
-      'endBtn'
+      'endBtn',
+      'recoveryEndBtn',
+      'observerEndBtn'
     ].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.disabled = value;
@@ -686,6 +795,29 @@
   }
 
   function applyIdleControls() {
+    stopObserverPolling_();
+    observerMode = false;
+
+    const observerBox =
+      document.getElementById('observerBox');
+
+    if (observerBox) {
+      observerBox.classList.add('hidden');
+    }
+
+    const recoveryBox =
+      document.getElementById('recoveryBox');
+    const setupBox =
+      document.getElementById('setupBox');
+
+    if (recoveryBox) {
+      recoveryBox.classList.add('hidden');
+    }
+
+    if (setupBox) {
+      setupBox.classList.remove('hidden');
+    }
+
     const range = document.getElementById('rangeSelect');
     const interval = document.getElementById('intervalSelect');
     const mapBtn = document.getElementById('mapBtn');
@@ -702,6 +834,16 @@
   }
 
   function applyRunningControls() {
+    stopObserverPolling_();
+    observerMode = false;
+
+    const observerBox =
+      document.getElementById('observerBox');
+
+    if (observerBox) {
+      observerBox.classList.add('hidden');
+    }
+
     const range = document.getElementById('rangeSelect');
     const interval = document.getElementById('intervalSelect');
     const mapBtn = document.getElementById('mapBtn');
@@ -734,6 +876,35 @@
   }
 
   function applyRecoveryControls() {
+    stopObserverPolling_();
+    observerMode = false;
+
+    const observerBox =
+      document.getElementById('observerBox');
+
+    if (observerBox) {
+      observerBox.classList.add('hidden');
+    }
+
+    const recoveryBox =
+      document.getElementById('recoveryBox');
+    const setupBox =
+      document.getElementById('setupBox');
+    const runningBox =
+      document.getElementById('runningBox');
+
+    if (recoveryBox) {
+      recoveryBox.classList.remove('hidden');
+    }
+
+    if (setupBox) {
+      setupBox.classList.add('hidden');
+    }
+
+    if (runningBox) {
+      runningBox.classList.add('hidden');
+    }
+
     const range = document.getElementById('rangeSelect');
     const interval = document.getElementById('intervalSelect');
     const mapBtn = document.getElementById('mapBtn');
@@ -747,6 +918,13 @@
     if (startBtn) startBtn.disabled = true;
     if (pauseBtn) pauseBtn.disabled = true;
     if (endBtn) endBtn.disabled = false;
+
+    const recoveryEndBtn =
+      document.getElementById('recoveryEndBtn');
+
+    if (recoveryEndBtn) {
+      recoveryEndBtn.disabled = false;
+    }
   }
 
   function restoreServerSimulationState(state) {
@@ -761,27 +939,184 @@
     paused = false;
     stopRequested = false;
 
-    document.getElementById('runningBox')
-      .classList.remove('hidden');
+    if (
+      state.simulation &&
+      state.simulation.active
+    ) {
+      applyObserverControls_(state);
+      return;
+    }
 
-    document.getElementById('pauseBtn')
-      .textContent = '一時停止';
-
-    document.getElementById('progressText')
-      .textContent = '—';
-
-    document.getElementById('currentPos')
-      .textContent = 'サーバー上にテストデータあり';
-
-    document.getElementById('bar')
-      .style.width = '100%';
-
-    setStatus(
-      '前回のシミュレーションがサーバー上で継続中です。送信の途中状態は復元できないため、「テスト終了・初期化」を押してから新しいテストを開始してください。',
-      'paused'
-    );
-
+    // 旧版等で進行情報がない場合は安全側に倒し、
+    // 専用の初期化画面を表示する。
     applyRecoveryControls();
+  }
+
+  function applyObserverControls_(state) {
+    observerMode = true;
+
+    const observerBox =
+      document.getElementById('observerBox');
+    const recoveryBox =
+      document.getElementById('recoveryBox');
+    const setupBox =
+      document.getElementById('setupBox');
+    const runningBox =
+      document.getElementById('runningBox');
+
+    if (observerBox) {
+      observerBox.classList.remove('hidden');
+    }
+
+    if (recoveryBox) {
+      recoveryBox.classList.add('hidden');
+    }
+
+    if (setupBox) {
+      setupBox.classList.add('hidden');
+    }
+
+    if (runningBox) {
+      runningBox.classList.add('hidden');
+    }
+
+    updateObserver_(state);
+    startObserverPolling_();
+  }
+
+  function updateObserver_(state) {
+    const simState =
+      state && state.simulation
+        ? state.simulation
+        : null;
+
+    if (!simState) return;
+
+    const total =
+      Math.max(
+        0,
+        Number(simState.totalPoints) || 0
+      );
+
+    const sent =
+      Math.max(
+        0,
+        Number(simState.sentPoints) || 0
+      );
+
+    const pct =
+      total > 0
+        ? Math.min(100, sent / total * 100)
+        : 0;
+
+    const statusMap = {
+      running: '実行中',
+      paused: '一時停止中',
+      completed: '送信完了・初期化待ち'
+    };
+
+    document.getElementById('observerRange')
+      .textContent =
+      simState.rangeLabel || '—';
+
+    document.getElementById('observerProgress')
+      .textContent =
+      total > 0
+        ? sent + ' / ' + total + '地点'
+        : sent + '地点';
+
+    document.getElementById('observerStatus')
+      .textContent =
+      statusMap[simState.status] ||
+      simState.status ||
+      '確認中';
+
+    document.getElementById('observerUpdated')
+      .textContent =
+      formatServerTime_(simState.updatedAt);
+
+    document.getElementById('observerBar')
+      .style.width =
+      pct.toFixed(1) + '%';
+
+    const title =
+      document.getElementById('observerTitle');
+
+    if (title) {
+      title.textContent =
+        simState.status === 'completed'
+          ? 'ダミーGPSの送信は完了しています'
+          : '別の端末からダミーGPSを送信しています';
+    }
+  }
+
+  function startObserverPolling_() {
+    stopObserverPolling_();
+
+    observerTimer = setInterval(
+      async () => {
+        if (!observerMode) return;
+
+        try {
+          const r = await adminCall('status');
+
+          if (!r.ok || !r.state) {
+            return;
+          }
+
+          updateServerState(r.state);
+
+          if (
+            r.state.sessionMode !== 'simulation'
+          ) {
+            serverSimulationActive = false;
+            applyIdleControls();
+            message(
+              'シミュレーションは終了しました。',
+              false
+            );
+            return;
+          }
+
+          if (
+            r.state.simulation &&
+            r.state.simulation.active
+          ) {
+            updateObserver_(r.state);
+          }
+        } catch (e) {
+          // 監視表示は一時的な通信失敗では消さない。
+        }
+      },
+      2500
+    );
+  }
+
+  function stopObserverPolling_() {
+    if (observerTimer) {
+      clearInterval(observerTimer);
+      observerTimer = null;
+    }
+  }
+
+  function formatServerTime_(value) {
+    if (!value) return '—';
+
+    const d = new Date(value);
+
+    if (Number.isNaN(d.getTime())) {
+      return '—';
+    }
+
+    return d.toLocaleTimeString(
+      'ja-JP',
+      {
+        timeZone: 'Asia/Tokyo',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }
+    );
   }
 
   function message(text, error) {
