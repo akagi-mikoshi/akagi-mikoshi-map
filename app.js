@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '1';
+  const VERSION = '3';
   const LEAFLET_CSS = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
   const LEAFLET_JS  = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
   const MIKOSHI_IMAGE = './mikoshi_marker.png?v=' + VERSION;
@@ -11,6 +11,10 @@
   let pollTimer = null;
   let activeJsonpScript = null;
   let responseTimer = null;
+  let plannedRouteGroup = null;
+  let routeBounds = null;
+  let routeVisible = true;
+  const stopMarkers = new Map();
 
   function loadStylesheet(url) {
     return new Promise((resolve, reject) => {
@@ -37,9 +41,19 @@
   function installBody() {
     document.body.innerHTML =
       '<div id="message">地図の準備をしています…</div>' +
-      '<div id="map"></div>' +
+      '<div id="mapWrap">' +
+        '<div id="map"></div>' +
+        '<button id="mapControlsButton" class="map-ui-btn" type="button">地図操作</button>' +
+        '<div id="mapControlsPanel" aria-hidden="true">' +
+          '<button id="fitRouteQuickButton" type="button">予定経路全体を表示</button>' +
+          '<button id="toggleRouteButton" type="button">予定経路を非表示にする</button>' +
+          '<button id="scheduleButton" type="button">巡行予定を見る</button>' +
+        '</div>' +
+        '<button id="returnButton" class="map-ui-btn" type="button" disabled>神輿位置へ</button>' +
+        '<div id="schedulePanel" aria-hidden="true"></div>' +
+      '</div>' +
       '<div id="status"></div>' +
-      '<div id="note">※休憩中などは位置情報の更新間隔が空くことがあります。GPSや通信状況により、実際の場所から多少ずれる場合があります。</div>';
+      '<div id="note">※予定時刻は進行状況により前後する場合があります。休憩中などは位置情報の更新間隔が空くことがあります。GPSや通信状況により、実際の場所から多少ずれる場合があります。</div>';
   }
 
   function setMessage(text) {
@@ -56,12 +70,12 @@
     ]);
 
     installBody();
-
     setMessage('地図の準備をしています…');
 
     await Promise.all([
       loadStylesheet(LEAFLET_CSS),
-      loadScript(LEAFLET_JS)
+      loadScript(LEAFLET_JS),
+      loadScript('./route-data.js?v=' + VERSION)
     ]);
 
     if (typeof L === 'undefined') {
@@ -69,7 +83,22 @@
     }
 
     initializeMap();
-    setMessage('位置情報を確認しています…');
+    addPlannedRoute();
+    buildSchedulePanel();
+    wireMapUi();
+
+    document.getElementById('message').style.display = 'none';
+    document.getElementById('mapWrap').style.display = 'block';
+    document.getElementById('status').style.display = 'block';
+    document.getElementById('note').style.display = 'block';
+
+    if (routeBounds && routeBounds.isValid()) {
+      map.fitBounds(routeBounds.pad(0.06));
+    } else {
+      map.setView([35.8485, 139.8961], 16);
+    }
+
+    requestAnimationFrame(() => map.invalidateSize());
     loadPublicState();
   }
 
@@ -80,6 +109,198 @@
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+  }
+
+  function addPlannedRoute() {
+    const data = window.MIKOSHI_ROUTE_DATA;
+    if (!data || !Array.isArray(data.segments)) return;
+
+    plannedRouteGroup = L.featureGroup().addTo(map);
+
+    data.segments.forEach(segment => {
+      const line = L.polyline(segment.coordinates, {
+        color: '#586979',
+        weight: 5,
+        opacity: 0.82,
+        dashArray: '8 7',
+        lineCap: 'round',
+        lineJoin: 'round'
+      });
+
+      line.bindPopup(
+        '<strong>予定巡行路 ' + escapeHtml(segment.label) + '</strong><br>' +
+        escapeHtml(segment.summary)
+      );
+
+      line.addTo(plannedRouteGroup);
+    });
+
+    if (Array.isArray(data.stops)) {
+      data.stops.forEach(stop => {
+        const m = L.circleMarker([stop.lat, stop.lon], {
+          radius: 6,
+          color: '#586979',
+          weight: 2,
+          fillColor: '#ffffff',
+          fillOpacity: 1
+        });
+
+        m.bindPopup(
+          '<strong>' + escapeHtml(stop.place) + '</strong><br>' +
+          '<span style="color:#8A2D24;font-weight:bold">' + escapeHtml(stop.time) + '</span><br>' +
+          escapeHtml(stop.note)
+        );
+
+        m.addTo(plannedRouteGroup);
+        stopMarkers.set(stop.id, m);
+      });
+    }
+
+    routeBounds = plannedRouteGroup.getBounds();
+  }
+
+  function buildSchedulePanel() {
+    const data = window.MIKOSHI_ROUTE_DATA;
+    const panel = document.getElementById('schedulePanel');
+    if (!panel || !data) return;
+
+    let html =
+      '<div class="schedule-head">' +
+        '<strong>巡行予定</strong>' +
+        '<button id="scheduleClose" type="button" aria-label="閉じる">×</button>' +
+      '</div>' +
+      '<div class="schedule-summary">予定巡行路は地図上の点線です。地点を選ぶと、その場所を地図で確認できます。</div>' +
+      '<button id="fitRouteButton" type="button">予定ルート全体を表示</button>' +
+      '<div class="schedule-list">';
+
+    data.stops.forEach(stop => {
+      html +=
+        '<button class="schedule-item" type="button" data-stop-id="' + stop.id + '">' +
+          '<div class="schedule-time">' + escapeHtml(stop.time) + '</div>' +
+          '<div>' +
+            '<div class="schedule-place">' + escapeHtml(stop.place) + '</div>' +
+            '<div class="schedule-note">' + escapeHtml(stop.note) + '</div>' +
+          '</div>' +
+        '</button>';
+    });
+
+    html += '</div>';
+    panel.innerHTML = html;
+
+    document.getElementById('scheduleClose').addEventListener('click', closeSchedule);
+    document.getElementById('fitRouteButton').addEventListener('click', () => {
+      fitPlannedRoute();
+      closeSchedule();
+    });
+
+    panel.querySelectorAll('.schedule-item').forEach(button => {
+      button.addEventListener('click', () => {
+        const id = Number(button.dataset.stopId);
+        focusStop(id);
+        closeSchedule();
+      });
+    });
+  }
+
+  function wireMapUi() {
+    document.getElementById('mapControlsButton').addEventListener('click', () => {
+      const panel = document.getElementById('mapControlsPanel');
+      const open = panel.classList.toggle('open');
+      panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+    });
+
+    document.getElementById('fitRouteQuickButton').addEventListener('click', () => {
+      fitPlannedRoute();
+      closeMapControls();
+    });
+
+    document.getElementById('toggleRouteButton').addEventListener('click', () => {
+      setRouteVisible(!routeVisible);
+    });
+
+    document.getElementById('scheduleButton').addEventListener('click', () => {
+      closeMapControls();
+      const panel = document.getElementById('schedulePanel');
+      panel.classList.add('open');
+      panel.setAttribute('aria-hidden', 'false');
+    });
+
+    document.getElementById('returnButton').addEventListener('click', () => {
+      if (marker) {
+        map.setView(marker.getLatLng(), 17);
+        marker.openPopup();
+      }
+    });
+
+    map.on('click', closeMapControls);
+  }
+
+  function fitPlannedRoute() {
+    if (routeBounds && routeBounds.isValid()) {
+      map.fitBounds(routeBounds.pad(0.06));
+    }
+  }
+
+  function setRouteVisible(visible) {
+    if (!plannedRouteGroup) return;
+
+    routeVisible = visible;
+
+    if (visible) {
+      if (!map.hasLayer(plannedRouteGroup)) {
+        plannedRouteGroup.addTo(map);
+      }
+    } else if (map.hasLayer(plannedRouteGroup)) {
+      map.removeLayer(plannedRouteGroup);
+    }
+
+    const button = document.getElementById('toggleRouteButton');
+    if (button) {
+      button.textContent = visible
+        ? '予定経路を非表示にする'
+        : '予定経路を表示する';
+    }
+  }
+
+  function closeMapControls() {
+    const panel = document.getElementById('mapControlsPanel');
+    if (!panel) return;
+    panel.classList.remove('open');
+    panel.setAttribute('aria-hidden', 'true');
+  }
+
+  function focusStop(id) {
+    const data = window.MIKOSHI_ROUTE_DATA;
+    if (!data || !Array.isArray(data.stops)) return;
+
+    const stop = data.stops.find(x => Number(x.id) === Number(id));
+    if (!stop) return;
+
+    const point = [stop.lat, stop.lon];
+    map.setView(point, Math.max(map.getZoom(), 17));
+
+    const markerForStop = stopMarkers.get(Number(id));
+
+    if (routeVisible && markerForStop && map.hasLayer(plannedRouteGroup)) {
+      markerForStop.openPopup();
+    } else {
+      L.popup()
+        .setLatLng(point)
+        .setContent(
+          '<strong>' + escapeHtml(stop.place) + '</strong><br>' +
+          '<span style="color:#8A2D24;font-weight:bold">' +
+          escapeHtml(stop.time) + '</span><br>' +
+          escapeHtml(stop.note)
+        )
+        .openOn(map);
+    }
+  }
+
+  function closeSchedule() {
+    const panel = document.getElementById('schedulePanel');
+    if (!panel) return;
+    panel.classList.remove('open');
+    panel.setAttribute('aria-hidden', 'true');
   }
 
   function mikoshiIconFactory() {
@@ -125,7 +346,7 @@
     const API_URL = window.MIKOSHI_API_URL || '';
 
     if (!API_URL || !API_URL.endsWith('/exec')) {
-      setMessage('API_URL が設定されていません。');
+      document.getElementById('status').textContent = '位置情報APIが設定されていません。';
       return;
     }
 
@@ -142,7 +363,8 @@
 
     activeJsonpScript.onerror = function() {
       clearResponseTimer();
-      if (!marker) setMessage('位置情報に接続しています…');
+      document.getElementById('status').textContent =
+        '神輿の現在位置：通信を確認しています…';
       setTimeout(loadPublicState, 2000);
     };
 
@@ -150,43 +372,43 @@
 
     clearResponseTimer();
     responseTimer = setTimeout(function() {
-      if (!marker) setMessage('位置情報に接続しています…');
+      document.getElementById('status').textContent =
+        '神輿の現在位置：通信を確認しています…';
       loadPublicState();
     }, 8000);
   }
 
   function showState(state) {
-    const message = document.getElementById('message');
-    const mapDiv = document.getElementById('map');
-    const status = document.getElementById('status');
-    const note = document.getElementById('note');
-
     if (!state || !state.isPublic) {
-      mapDiv.style.display = 'none';
-      status.style.display = 'none';
-      note.style.display = 'none';
-      message.style.display = 'flex';
-      message.textContent = '現在、神輿の位置情報は公開していません。';
+      hideCurrentLocation();
+      document.getElementById('status').textContent =
+        '神輿の現在位置：地図に表示していません';
       return;
     }
 
     if (!state.latest) {
-      mapDiv.style.display = 'none';
-      status.style.display = 'none';
-      note.style.display = 'none';
-      message.style.display = 'flex';
-      message.textContent = '神輿の位置情報が届くまで、しばらくお待ちください。';
+      hideCurrentLocation();
+      document.getElementById('status').textContent =
+        '神輿の現在位置：位置情報を待っています';
       return;
     }
 
-    message.style.display = 'none';
-    mapDiv.style.display = 'block';
-    status.style.display = 'block';
-    note.style.display = 'block';
-
     showLocation(state.latest);
+  }
 
-    requestAnimationFrame(() => map.invalidateSize());
+  function hideCurrentLocation() {
+    if (marker) {
+      map.removeLayer(marker);
+      marker = null;
+    }
+
+    if (accuracyCircle) {
+      map.removeLayer(accuracyCircle);
+      accuracyCircle = null;
+    }
+
+    firstLocation = true;
+    document.getElementById('returnButton').disabled = true;
   }
 
   function showLocation(data) {
@@ -208,6 +430,8 @@
       marker.setLatLng(point);
     }
 
+    document.getElementById('returnButton').disabled = false;
+
     if (Number.isFinite(accuracy) && accuracy > 0) {
       if (!accuracyCircle) {
         accuracyCircle = L.circle(point, {
@@ -222,6 +446,9 @@
         accuracyCircle.setLatLng(point);
         accuracyCircle.setRadius(accuracy);
       }
+    } else if (accuracyCircle) {
+      map.removeLayer(accuracyCircle);
+      accuracyCircle = null;
     }
 
     if (firstLocation) {
@@ -252,11 +479,20 @@
       accuracyText = '　位置精度：約' + Math.round(accuracy) + 'm';
     }
 
+    let sourceText = '';
+    if (data.source === 'default') {
+      sourceText = '　赤城神社（初期位置）';
+    }
+
     document.getElementById('status').textContent =
-      '最終更新 ' + timeText + '（' + ageText + '）' + accuracyText;
+      '最終更新 ' + timeText + '（' + ageText + '）' +
+      accuracyText + sourceText;
 
     marker.setPopupContent(
       '<strong>神輿の現在位置</strong><br>' +
+      (data.source === 'default'
+        ? '赤城神社（初期位置）<br>'
+        : '') +
       '最終更新 ' + timeText +
       (Number.isFinite(accuracy) && accuracy > 0
         ? '<br>位置精度：約' + Math.round(accuracy) + 'm'
@@ -268,6 +504,15 @@
     if (pollTimer) clearTimeout(pollTimer);
     clearResponseTimer();
     loadPublicState();
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   document.addEventListener('visibilitychange', function() {

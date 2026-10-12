@@ -2,7 +2,8 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;font-family:
 body{display:flex;flex-direction:column}
 #boot{margin:25vh 12px 0;text-align:center;font-size:15px;line-height:1.6}
 #message{display:flex;flex:1 1 auto;align-items:center;justify-content:center;padding:18px 12px;text-align:center;font-size:15px;line-height:1.6}
-#map{display:none;flex:1 1 auto;width:100%;min-height:300px;background:#f4f4f4}
+#mapWrap{display:none;position:relative;flex:1 1 auto;min-height:300px;background:#f4f4f4}
+#map{position:absolute;inset:0;background:#f4f4f4}
 #status{display:none;flex:0 0 auto;padding:6px 8px 2px;font-size:14px;line-height:1.5;background:#fff}
 #note{display:none;flex:0 0 auto;padding:2px 8px 7px;font-size:11px;line-height:1.5;color:#555;background:#fff}
 .mikoshi-leaflet-icon{background:transparent;border:none}
@@ -10,3 +11,25 @@ body{display:flex;flex-direction:column}
 .mikoshi-badge{position:absolute;left:3px;top:2px;width:64px;height:64px;display:flex;align-items:center;justify-content:center;background:#fff;border:4px solid #8A2D24;border-radius:50%;box-sizing:border-box;box-shadow:0 0 0 2px rgba(255,255,255,.98),0 3px 8px rgba(0,0,0,.42);z-index:2}
 .mikoshi-badge img{width:52px;height:52px;object-fit:contain}
 .mikoshi-pin::after{content:"";position:absolute;left:27px;top:62px;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:15px solid #8A2D24;z-index:1}
+.map-ui-btn{position:absolute;z-index:800;background:#fff;border:1px solid rgba(0,0,0,.28);border-radius:6px;box-shadow:0 1px 5px rgba(0,0,0,.25);min-height:38px;padding:7px 10px;font:700 13px Meiryo,sans-serif;color:#333}
+#mapControlsButton{top:10px;right:10px}
+#returnButton{left:10px;bottom:28px}
+#returnButton:disabled{opacity:.48}
+#mapControlsPanel{display:none;position:absolute;z-index:850;top:54px;right:10px;width:190px;background:#fff;border:1px solid rgba(0,0,0,.20);border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.28);padding:7px}
+#mapControlsPanel.open{display:grid;gap:6px}
+#mapControlsPanel button{width:100%;min-height:38px;border:0;border-radius:6px;background:#f4f4f4;padding:7px 8px;font:700 12px Meiryo,sans-serif;color:#333;text-align:left}
+#mapControlsPanel button:active{background:#e7e7e7}
+#schedulePanel{display:none;position:absolute;z-index:900;left:10px;right:10px;bottom:10px;max-height:72%;overflow:auto;background:#fff;border-radius:10px;box-shadow:0 3px 18px rgba(0,0,0,.35);padding:12px}
+#schedulePanel.open{display:block}
+.schedule-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.schedule-head strong{font-size:16px}
+#scheduleClose{border:0;background:#eee;border-radius:50%;width:34px;height:34px;font-size:20px;line-height:30px}
+.schedule-summary{font-size:11px;line-height:1.5;color:#555;margin-bottom:8px}
+.schedule-list{display:grid;gap:5px}
+.schedule-item{display:grid;grid-template-columns:92px 1fr;gap:7px;width:100%;text-align:left;border:0;border-top:1px solid #eee;background:#fff;padding:8px 3px;font-family:Meiryo,sans-serif;color:#222}
+.schedule-time{font-weight:700;color:#8A2D24;font-size:12px}
+.schedule-place{font-size:13px;font-weight:700}
+.schedule-note{font-size:11px;color:#666;margin-top:2px}
+#fitRouteButton{width:100%;min-height:38px;border:1px solid #666;border-radius:6px;background:#fff;font:700 13px Meiryo,sans-serif;margin:4px 0 6px}
+.leaflet-popup-content{font-family:Meiryo,sans-serif;line-height:1.5}
+@media (max-height:560px){#schedulePanel{max-height:65%}#note{font-size:10px}}

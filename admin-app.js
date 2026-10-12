@@ -1,7 +1,8 @@
 (() => {
-  const VERSION = '1';
+  const VERSION = '2';
   let token = sessionStorage.getItem('mikoshiAdminToken') || '';
   let busy = false;
+  let currentPublicState = false;
   let seq = 0;
 
   function loadCss(url) {
@@ -57,52 +58,99 @@
             <button id="loginBtn" class="primary">管理画面を開く</button>
             <div class="muted" style="margin-top:8px">パスワードはGitHubには保存しません。</div>
           </div>
+
           <div id="adminBox" class="hidden">
+            <div class="section-label">地図上での神輿の現在位置の表示</div>
             <div id="publicStatus" class="status off"><span class="dot"></span><span>確認中</span></div>
-            <div id="stateInfo" class="info"></div>
+            <div class="muted status-help">一般向けWebページ自体は公開されたままです。ここでは、地図上に神輿位置を見せるかどうかを示します。</div>
+            <div id="stateInfo" class="info state-info"></div>
             <div id="mainMessage"></div>
           </div>
         </div>
 
         <div id="controls" class="hidden">
           <div class="card">
-            <h2>当日の基本操作</h2>
+            <h2>当日の一括操作</h2>
             <div class="stack">
-              <button id="startBtn" class="safe">巡行開始</button>
-              <button id="endBtn" class="danger">巡行終了</button>
+              <button id="startBtn" class="safe">巡行を開始する</button>
+              <button id="endBtn" class="danger">巡行を終了する</button>
             </div>
-            <div class="muted" style="margin-top:9px">「巡行開始」は履歴を消去し、赤城神社を初期位置として公開を開始します。「巡行終了」は公開を停止し、位置データを赤城神社へ戻します。</div>
+            <div class="operation-note">
+              <div><strong>巡行を開始する：</strong>位置履歴を初期化し、赤城神社を初期位置として、一般向け地図への神輿位置表示を開始します。</div>
+              <div><strong>巡行を終了する：</strong>神輿位置の表示を停止し、位置履歴を消去して、位置データを赤城神社へ戻します。</div>
+            </div>
           </div>
 
           <div class="card">
-            <h2>個別操作</h2>
-            <div class="row">
-              <button id="onBtn" class="primary">公開する</button>
-              <button id="offBtn" class="outline">公開停止</button>
-            </div>
-            <div class="stack" style="margin-top:10px">
-              <button id="resetBtn">非公開＋赤城神社へリセット</button>
-              <button id="clearBtn">位置履歴を消去</button>
-              <button id="refreshBtn" class="small-btn">状態を再確認</button>
+            <h2>神輿位置の表示（例外時の操作）</h2>
+            <div class="muted" style="margin-bottom:10px">通常は「巡行を開始する」「巡行を終了する」を使用します。巡行中に一時的に地図から神輿位置を隠したい場合などに使用します。</div>
+            <button id="visibilityBtn" class="outline">確認中</button>
+          </div>
+
+          <div class="card caution-card">
+            <h2>初期化・消去</h2>
+            <div class="warning-note">通常は操作しません。誤操作を防ぐため、実行前に確認画面が表示されます。</div>
+            <div class="danger-stack">
+              <button id="resetBtn" class="caution">非表示にして赤城神社の位置へリセット</button>
+              <button id="clearBtn" class="caution">位置履歴を消去</button>
             </div>
           </div>
 
           <div class="card">
             <h2>管理</h2>
-            <button id="logoutBtn" class="small-btn">ログアウト</button>
+            <div class="stack">
+              <button id="refreshBtn" class="small-btn">現在の状態を再確認</button>
+              <button id="logoutBtn" class="small-btn">ログアウト</button>
+            </div>
           </div>
         </div>
+
         <div class="footer">管理用URLは一般向けQRコードには使用しません。</div>
       </div>`;
 
     document.getElementById('loginBtn').onclick = login;
     document.getElementById('password').onkeydown = e => { if (e.key === 'Enter') login(); };
-    document.getElementById('startBtn').onclick = () => confirmRun('巡行開始','位置履歴を消去し、赤城神社を初期位置として公開を開始します。よろしいですか？','start');
-    document.getElementById('endBtn').onclick = () => confirmRun('巡行終了','公開を停止し、位置履歴を消去して、位置データを赤城神社へ戻します。よろしいですか？','end');
-    document.getElementById('onBtn').onclick = () => run('publicOn','公開を開始しました。');
-    document.getElementById('offBtn').onclick = () => run('publicOff','公開を停止しました。');
-    document.getElementById('resetBtn').onclick = () => confirmRun('赤城神社へリセット','公開を停止し、位置履歴を消去して、現在地データを赤城神社へ戻します。よろしいですか？','resetDefault');
-    document.getElementById('clearBtn').onclick = () => confirmRun('位置履歴を消去','保存されている位置履歴を消去します。最新位置そのものは変更しません。よろしいですか？','clearHistory');
+
+    document.getElementById('startBtn').onclick = () =>
+      confirmRun(
+        '巡行を開始する',
+        '位置履歴を初期化し、赤城神社を初期位置として、一般向け地図への神輿位置表示を開始します。よろしいですか？',
+        'start'
+      );
+
+    document.getElementById('endBtn').onclick = () =>
+      confirmRun(
+        '巡行を終了する',
+        '一般向け地図での神輿位置表示を停止し、位置履歴を消去して、位置データを赤城神社へ戻します。よろしいですか？',
+        'end'
+      );
+
+    document.getElementById('visibilityBtn').onclick = () => {
+      if (currentPublicState) {
+        confirmRun(
+          '神輿位置を地図に表示しない',
+          '一般向け地図から神輿の現在位置を非表示にします。Webページ自体は公開されたままで、Traccarからの位置受信も続きます。よろしいですか？',
+          'publicOff'
+        );
+      } else {
+        run('publicOn', '神輿位置を地図に表示する設定にしました。');
+      }
+    };
+
+    document.getElementById('resetBtn').onclick = () =>
+      confirmRun(
+        '赤城神社の位置へリセット',
+        '一般向け地図での神輿位置表示を停止し、位置履歴を消去して、現在位置データを赤城神社へ戻します。よろしいですか？',
+        'resetDefault'
+      );
+
+    document.getElementById('clearBtn').onclick = () =>
+      confirmRun(
+        '位置履歴を消去',
+        '保存されている位置履歴を消去します。現在位置そのものは変更しません。よろしいですか？',
+        'clearHistory'
+      );
+
     document.getElementById('refreshBtn').onclick = refresh;
     document.getElementById('logoutBtn').onclick = logout;
   }
@@ -207,20 +255,48 @@
   }
 
   function updateState(state) {
+    currentPublicState = !!state.isPublic;
+
     const s = document.getElementById('publicStatus');
-    s.className = 'status ' + (state.isPublic ? 'on' : 'off');
-    s.innerHTML = '<span class="dot"></span><span>' + (state.isPublic ? '公開中' : '非公開') + '</span>';
+    s.className = 'status ' + (currentPublicState ? 'on' : 'off');
+    s.innerHTML =
+      '<span class="dot"></span><span>' +
+      (currentPublicState ? '神輿位置を地図に表示中' : '神輿位置を地図に表示していません') +
+      '</span>';
+
+    const visibilityBtn = document.getElementById('visibilityBtn');
+    if (visibilityBtn) {
+      visibilityBtn.textContent = currentPublicState
+        ? '神輿位置を地図に表示しない'
+        : '神輿位置を地図に表示する';
+      visibilityBtn.className = currentPublicState ? 'outline' : 'primary';
+    }
 
     const x = state.latest;
     let h = '';
+
     if (x) {
       const src = x.source === 'default' ? '赤城神社（初期位置）' : 'GPS';
-      h += '<div><strong>最新位置</strong>' + esc(src) + '</div>';
+      h += '<div><strong>保存中の位置</strong>' + esc(src) + '</div>';
       h += '<div><strong>最終受信</strong>' + esc(jpTime(x.receivedAt)) + '（' + esc(age(x.receivedAt)) + '）</div>';
-      if (x.accuracy !== null && x.accuracy !== undefined && Number.isFinite(Number(x.accuracy))) h += '<div><strong>位置精度</strong>約' + Math.round(Number(x.accuracy)) + 'm</div>';
-      h += '<div><strong>緯度・経度</strong>' + Number(x.lat).toFixed(6) + ', ' + Number(x.lon).toFixed(6) + '</div>';
-    } else h += '<div><strong>最新位置</strong>未登録</div>';
+
+      if (
+        x.accuracy !== null &&
+        x.accuracy !== undefined &&
+        Number.isFinite(Number(x.accuracy))
+      ) {
+        h += '<div><strong>位置精度</strong>約' + Math.round(Number(x.accuracy)) + 'm</div>';
+      }
+
+      h += '<div><strong>緯度・経度</strong>' +
+        Number(x.lat).toFixed(6) + ', ' +
+        Number(x.lon).toFixed(6) + '</div>';
+    } else {
+      h += '<div><strong>保存中の位置</strong>未登録</div>';
+    }
+
     h += '<div><strong>履歴件数</strong>' + Number(state.historyCount || 0) + '件</div>';
+
     document.getElementById('stateInfo').innerHTML = h;
   }
 
