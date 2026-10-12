@@ -1,8 +1,9 @@
 (() => {
-  const VERSION = '9';
+  const VERSION = '10';
   let token = sessionStorage.getItem('mikoshiAdminToken') || '';
   let busy = false;
   let currentPublicState = false;
+  let lastAdminState = null;
   let seq = 0;
 
   function loadCss(url) {
@@ -72,6 +73,7 @@
         <div id="controls" class="hidden">
           <div class="card">
             <h2>当日の一括操作</h2>
+            <div id="operationState" class="operation-state">状態を確認しています…</div>
             <div class="stack">
               <button id="startBtn" class="safe">巡行を開始する</button>
               <button id="endBtn" class="danger">巡行を終了する</button>
@@ -98,7 +100,7 @@
             <h2>初期化・消去</h2>
             <div class="warning-note">通常は操作しません。誤操作を防ぐため、実行前に確認画面が表示されます。</div>
             <div class="danger-stack">
-              <button id="resetBtn" class="caution">非表示にして赤城神社の位置へリセット</button>
+              <button id="resetBtn" class="caution">神輿位置の表示・記録を停止して赤城神社へリセット</button>
               <button id="clearBtn" class="caution">位置履歴を消去</button>
             </div>
           </div>
@@ -153,8 +155,8 @@
 
     document.getElementById('resetBtn').onclick = () =>
       confirmRun(
-        '赤城神社の位置へリセット',
-        'GPS位置の記録と一般向け地図での神輿位置表示を停止し、位置履歴を消去して、現在位置データを赤城神社へ戻します。よろしいですか？',
+        '神輿位置の表示・記録を停止して赤城神社へリセット',
+        '一般向け地図の神輿位置を非表示にし、GPS位置の記録を停止します。位置履歴を消去し、保存中の位置を赤城神社へ戻します。よろしいですか？',
         'resetDefault'
       );
 
@@ -322,6 +324,7 @@
   }
 
   function updateState(state) {
+    lastAdminState = state;
     currentPublicState = !!state.isPublic;
 
     const s = document.getElementById('publicStatus');
@@ -398,6 +401,65 @@
             )
           : 'GPS位置の記録：停止中';
     }
+
+    updateActionButtons_(state);
+  }
+
+  function updateActionButtons_(state) {
+    const startBtn = document.getElementById('startBtn');
+    const endBtn = document.getElementById('endBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const operationState =
+      document.getElementById('operationState');
+
+    if (!state) return;
+
+    const isSimulation =
+      state.sessionMode === 'simulation';
+    const isRealRunning =
+      !!state.isSessionActive &&
+      state.sessionMode === 'real';
+    const isStopped =
+      !state.isSessionActive;
+
+    if (operationState) {
+      if (isSimulation) {
+        operationState.className =
+          'operation-state simulation';
+        operationState.textContent =
+          '現在：シミュレーション実行中';
+      } else if (isRealRunning) {
+        operationState.className =
+          'operation-state running';
+        operationState.textContent =
+          '現在：巡行中（GPS位置を記録中）';
+      } else {
+        operationState.className =
+          'operation-state stopped';
+        operationState.textContent =
+          '現在：巡行開始前／終了後（GPS位置の記録停止中）';
+      }
+    }
+
+    if (startBtn) {
+      startBtn.disabled =
+        busy ||
+        !isStopped ||
+        isSimulation;
+    }
+
+    if (endBtn) {
+      endBtn.disabled =
+        busy ||
+        !isRealRunning;
+    }
+
+    // 巡行・シミュレーション中に履歴だけを消してしまわないようにする。
+    if (clearBtn) {
+      clearBtn.disabled =
+        busy ||
+        !!state.isSessionActive;
+    }
   }
 
   function jpTime(v) {
@@ -414,7 +476,26 @@
   }
 
   function setBusy(v) {
-    busy = v; document.querySelectorAll('button').forEach(b => b.disabled = v);
+    busy = v;
+
+    document
+      .querySelectorAll('button')
+      .forEach(b => {
+        b.disabled = v;
+      });
+
+    if (!v && lastAdminState) {
+      // 通信処理後も、巡行状態に応じたボタンの有効／無効を維持する。
+      updateActionButtons_(lastAdminState);
+
+      const simulationEndBtn =
+        document.getElementById('simulationEndBtn');
+
+      if (simulationEndBtn) {
+        simulationEndBtn.disabled =
+          lastAdminState.sessionMode !== 'simulation';
+      }
+    }
   }
 
   function mainMessage(text, error=false, ok=false) {

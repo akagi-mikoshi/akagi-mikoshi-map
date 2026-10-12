@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '5';
+  const VERSION = '7';
   const LEAFLET_CSS = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
   const LEAFLET_JS  = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
   const MIKOSHI_IMAGE = './mikoshi_marker.png?v=' + VERSION;
@@ -10,7 +10,7 @@
   let map = null;
   let marker = null;
   let accuracyCircle = null;
-  let firstLocation = true;
+  let initialStateResolved = false;
   let pollTimer = null;
   let activeJsonpScript = null;
   let responseTimer = null;
@@ -154,17 +154,21 @@
     if (Array.isArray(data.stops)) {
       data.stops.forEach(stop => {
         const m = L.circleMarker([stop.lat, stop.lon], {
-          radius: 6,
+          radius: 8,
           color: '#586979',
-          weight: 2,
+          weight: 3,
           fillColor: '#ffffff',
           fillOpacity: 1
         });
 
+        // 地図上のポップアップは簡潔にする。
+        // 時刻と「着・休憩・発」の情報は stop.note にまとまっているため、
+        // stop.time を重ねて表示しない。
         m.bindPopup(
           '<strong>' + escapeHtml(stop.place) + '</strong><br>' +
-          '<span style="color:#8A2D24;font-weight:bold">' + escapeHtml(stop.time) + '</span><br>' +
-          escapeHtml(stop.note)
+          '<span style="color:#8A2D24;font-weight:bold">' +
+          escapeHtml(stop.note) +
+          '</span>'
         );
 
         m.addTo(plannedRouteGroup);
@@ -822,6 +826,10 @@
       updateActualTrail([]);
       document.getElementById('status').textContent =
         '神輿の現在位置：地図に表示していません';
+
+      // 最初の応答が「非表示」だった場合、
+      // 後から表示に変わっても地図倍率を勝手に変更しない。
+      initialStateResolved = true;
       return;
     }
 
@@ -830,10 +838,15 @@
       updateActualTrail([]);
       document.getElementById('status').textContent =
         '神輿の現在位置：位置情報を待っています';
+
+      initialStateResolved = true;
       return;
     }
 
-    showLocation(state.latest);
+    const shouldInitialZoom = !initialStateResolved;
+    initialStateResolved = true;
+
+    showLocation(state.latest, shouldInitialZoom);
     updateActualTrail(state.trail || []);
   }
 
@@ -848,11 +861,10 @@
       accuracyCircle = null;
     }
 
-    firstLocation = true;
     document.getElementById('returnButton').disabled = true;
   }
 
-  function showLocation(data) {
+  function showLocation(data, shouldInitialZoom) {
     const lat = Number(data.lat);
     const lon = Number(data.lon);
     const accuracy = Number(data.accuracy);
@@ -860,6 +872,8 @@
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
 
     const point = [lat, lon];
+
+    const isNewMarker = !marker;
 
     if (!marker) {
       marker = L.marker(point, {
@@ -892,9 +906,14 @@
       accuracyCircle = null;
     }
 
-    if (firstLocation) {
+    if (shouldInitialZoom) {
+      // ページを開いた時点ですでに位置表示中なら、
+      // 最初だけ神輿を中心に見やすい倍率へ。
       map.setView(point, 17);
-      firstLocation = false;
+    } else if (isNewMarker) {
+      // 「非表示→表示」の切替では倍率を変えず、
+      // 現在の倍率のまま神輿位置へ移動する。
+      map.panTo(point);
     }
 
     const updated = new Date(data.receivedAt);

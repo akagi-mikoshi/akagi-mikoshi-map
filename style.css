@@ -21,9 +21,9 @@ body{display:flex;flex-direction:column}
 #mapControlsPanel button:active{background:#e7e7e7}
 #schedulePanel{display:none;position:absolute;z-index:900;left:10px;right:10px;bottom:10px;max-height:72%;overflow:auto;background:#fff;border-radius:10px;box-shadow:0 3px 18px rgba(0,0,0,.35);padding:12px}
 #schedulePanel.open{display:block}
-.schedule-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.schedule-head{position:sticky;top:-12px;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-12px -12px 8px;padding:12px 12px 9px;background:#fff;border-bottom:1px solid #e5e5e5}
 .schedule-head strong{font-size:16px}
-#scheduleClose{border:0;background:#eee;border-radius:50%;width:34px;height:34px;font-size:20px;line-height:30px}
+#scheduleClose{flex:0 0 auto;border:0;background:#eee;border-radius:50%;width:42px;height:42px;font-size:24px;line-height:38px}
 .schedule-summary{font-size:11px;line-height:1.5;color:#555;margin-bottom:8px}
 .schedule-list{display:grid;gap:5px}
 .schedule-item{display:grid;grid-template-columns:92px 1fr;gap:7px;width:100%;text-align:left;border:0;border-top:1px solid #eee;background:#fff;padding:8px 3px;font-family:Meiryo,sans-serif;color:#222}

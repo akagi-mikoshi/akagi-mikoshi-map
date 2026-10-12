@@ -40,3 +40,9 @@ button:disabled{opacity:.5;cursor:default}
 .recording-status{margin-top:10px;padding:8px 10px;border-radius:7px;font-size:13px;font-weight:bold}
 .recording-on{background:#e8f5eb;color:#215d31}
 .recording-off{background:#f0f0f0;color:#555}
+
+.operation-state{margin:0 0 12px;padding:9px 10px;border-radius:8px;font-size:13px;font-weight:bold;line-height:1.5}
+.operation-state.stopped{background:#f0f0f0;color:#555}
+.operation-state.running{background:#e8f5eb;color:#215d31;border:1px solid #9bc4a6}
+.operation-state.simulation{background:#fff3cd;color:#644b00;border:1px solid #e0c260}
+#startBtn:disabled,#endBtn:disabled,#clearBtn:disabled{opacity:.42;filter:grayscale(.15)}
