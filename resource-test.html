@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>外部リソース読込テスト</title>
+  <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=R7u7AWuiAEemTQlH83UVXkmsl7MDMktyxgQVDY68V7SKa_EgTdEJqEScxhPV0nusR4uCFEybeTws3D1mbJzfVOp4gdcx-NCN5IqQU65D2MraIpJn9ZTiR0BBeTZsYrZJR0RUpicm1xPsRAmtli4BXatDO3Hst8xpV7QX3TIEKegtHh2sPjUXKcLUvX2-_95Y_RVUOF-X4e3L1-YKXfo6ARpGL7nT2NZB93qjeByHXHzf8G7i0PWp4lVCudH3d87wyBKZgxjMrinND6MdaBL5w5s8JPimX8-dX9ZLnd6J6hjO900ysTbGTsQLirurncOP" charset="UTF-8"></script><style>
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: Meiryo, sans-serif;
+      line-height: 1.6;
+      background: #fff;
+      color: #222;
+    }
+    h1 {
+      font-size: 20px;
+      margin: 0 0 12px;
+    }
+    p {
+      margin: 0 0 12px;
+    }
+    button {
+      display: block;
+      width: 100%;
+      max-width: 360px;
+      min-height: 46px;
+      margin: 10px 0;
+      padding: 8px 12px;
+      font-size: 16px;
+    }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin-top: 14px;
+      padding: 10px;
+      background: #f6f6f6;
+      border: 1px solid #ddd;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <h1>外部リソース読込テスト</h1>
+  <p>この画面がすぐ出れば、HTMLと通常のJavaScriptは正常です。</p>
+
+  <button id="cssBtn" type="button">1. Leaflet CSS を読み込む</button>
+  <button id="jsBtn" type="button">2. Leaflet JavaScript を読み込む</button>
+
+  <pre id="log">[開始] ページ表示完了</pre>
+
+  <script>
+    const log = document.getElementById('log');
+
+    function add(text) {
+      log.textContent += '\n' + text;
+    }
+
+    document.getElementById('cssBtn').addEventListener('click', function () {
+      const button = this;
+      button.disabled = true;
+      const start = performance.now();
+
+      add('[CSS] 読込開始');
+
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href =
+        'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css?test=' +
+        Date.now();
+
+      link.onload = function () {
+        add(
+          '[CSS] 読込完了 ' +
+          ((performance.now() - start) / 1000).toFixed(2) +
+          '秒'
+        );
+      };
+
+      link.onerror = function () {
+        add(
+          '[CSS] 読込失敗 ' +
+          ((performance.now() - start) / 1000).toFixed(2) +
+          '秒'
+        );
+      };
+
+      document.head.appendChild(link);
+    });
+
+    document.getElementById('jsBtn').addEventListener('click', function () {
+      const button = this;
+      button.disabled = true;
+      const start = performance.now();
+
+      add('[JS] 読込開始');
+
+      const script = document.createElement('script');
+      script.src =
+        'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js?test=' +
+        Date.now();
+      script.async = true;
+
+      script.onload = function () {
+        add(
+          '[JS] 読込完了 ' +
+          ((performance.now() - start) / 1000).toFixed(2) +
+          '秒 / Leaflet=' +
+          (typeof L !== 'undefined' ? '利用可能' : '未確認')
+        );
+      };
+
+      script.onerror = function () {
+        add(
+          '[JS] 読込失敗 ' +
+          ((performance.now() - start) / 1000).toFixed(2) +
+          '秒'
+        );
+      };
+
+      document.head.appendChild(script);
+    });
+  </script>
+</body>
+</html>
