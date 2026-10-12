@@ -112,8 +112,8 @@
               <label for="intervalSelect">ダミー位置の送信間隔</label>
               <select id="intervalSelect">
                 <option value="500">0.5秒（最速）</option>
-                <option value="1000" selected>1秒（標準）</option>
-                <option value="2000">2秒</option>
+                <option value="1000">1秒（高速）</option>
+                <option value="2000" selected>2秒（標準）</option>
                 <option value="5000">5秒</option>
               </select>
             </div>
@@ -451,15 +451,59 @@
 
         index++;
         updateProgress(point);
-        updateServerState(r.state);
+
+        if (r.state) {
+          updateServerState(r.state);
+        }
+
+        // 10点ごとにだけ状態確認を行い、高頻度のサーバー負荷を抑える。
+        if (
+          index % 10 === 0 ||
+          index === samples.length
+        ) {
+          try {
+            const statusResult = await adminCall('status');
+            if (statusResult.ok) {
+              updateServerState(statusResult.state);
+            }
+          } catch (statusError) {
+            // 位置送信自体が成功している場合は、表示用状態確認の失敗では止めない。
+          }
+        }
       } catch (e) {
+        if (e.message === 'simulation_not_active') {
+          running = false;
+          paused = false;
+          serverSimulationActive = false;
+
+          if (typeof applyRecoveryControls === 'function') {
+            applyRecoveryControls();
+          } else {
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('endBtn').disabled = false;
+          }
+
+          setStatus(
+            '管理画面などからシミュレーションが停止されました。送信は再開できません。「テスト終了・初期化」を押して画面をリセットしてください。',
+            'paused'
+          );
+
+          message(
+            'サーバー側ではシミュレーションが停止済みです。',
+            false
+          );
+          break;
+        }
+
         paused = true;
         document.getElementById('pauseBtn')
           .textContent = '再開する';
+
         setStatus(
-          '送信に失敗したため一時停止しました。通信状態を確認して再開してください。',
+          '位置送信に失敗したため一時停止しました。通信状態を確認して再開してください。',
           'paused'
         );
+
         message('位置送信エラー: ' + e.message, true);
         continue;
       }

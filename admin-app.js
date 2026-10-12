@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '6';
+  const VERSION = '7';
   let token = sessionStorage.getItem('mikoshiAdminToken') || '';
   let busy = false;
   let currentPublicState = false;
@@ -112,7 +112,7 @@
           </div>
         </div>
 
-        <div class="footer">管理用URLは一般向けQRコードには使用しません。</div>
+        <div class="footer">管理セッションはログインから12時間有効です。ブラウザやタブを閉じた場合は再ログインが必要になることがあります。<br>管理用URLは一般向けQRコードには使用しません。</div>
       </div>`;
 
     document.getElementById('loginBtn').onclick = login;
