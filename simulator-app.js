@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '6';
+  const VERSION = '7';
   const SAMPLE_SPACING_M = 30;
 
   let token = sessionStorage.getItem('mikoshiAdminToken') || '';
@@ -467,7 +467,15 @@
               rangeSelect.selectedIndex
             ].textContent,
           totalPoints: samples.length,
-          intervalMs: Number(intervalSelect.value)
+          intervalMs: Number(intervalSelect.value),
+          startLat:
+            samples.length
+              ? Number(samples[0][0]).toFixed(7)
+              : '',
+          startLon:
+            samples.length
+              ? Number(samples[0][1]).toFixed(7)
+              : ''
         }
       );
 

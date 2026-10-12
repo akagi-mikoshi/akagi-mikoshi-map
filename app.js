@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '7';
+  const VERSION = '8';
   const LEAFLET_CSS = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
   const LEAFLET_JS  = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
   const MIKOSHI_IMAGE = './mikoshi_marker.png?v=' + VERSION;
@@ -64,7 +64,7 @@
         '</div>' +
         '<button id="returnButton" class="map-ui-btn" type="button" disabled>神輿位置へ</button>' +
         '<div id="simulationBadge">シミュレーション中</div>' +
-        '<div id="routeLegend"><span class="legend-actual"></span>通過済み <span class="legend-plan"></span>予定</div>' +
+        '<div id="routeLegend"><span class="legend-actual"></span>通過済み <span class="legend-plan"></span>予定経路 <span class="legend-stop"></span>予定地点</div>' +
         '<div id="schedulePanel" aria-hidden="true"></div>' +
       '</div>' +
       '<div id="status"></div>' +
@@ -843,10 +843,13 @@
       return;
     }
 
-    const shouldInitialZoom = !initialStateResolved;
+    const wasInitialState = !initialStateResolved;
     initialStateResolved = true;
 
-    showLocation(state.latest, shouldInitialZoom);
+    // リロード時は神輿の表示有無にかかわらず、
+    // prepare() で設定した予定経路全体の縮尺・位置を維持する。
+    // 非表示→表示の切替時だけ、倍率を変えずに神輿位置へ移動する。
+    showLocation(state.latest, !wasInitialState);
     updateActualTrail(state.trail || []);
   }
 
@@ -864,7 +867,7 @@
     document.getElementById('returnButton').disabled = true;
   }
 
-  function showLocation(data, shouldInitialZoom) {
+  function showLocation(data, shouldPanToMarker) {
     const lat = Number(data.lat);
     const lon = Number(data.lon);
     const accuracy = Number(data.accuracy);
@@ -906,13 +909,9 @@
       accuracyCircle = null;
     }
 
-    if (shouldInitialZoom) {
-      // ページを開いた時点ですでに位置表示中なら、
-      // 最初だけ神輿を中心に見やすい倍率へ。
-      map.setView(point, 17);
-    } else if (isNewMarker) {
-      // 「非表示→表示」の切替では倍率を変えず、
-      // 現在の倍率のまま神輿位置へ移動する。
+    if (shouldPanToMarker && isNewMarker) {
+      // 管理画面で「非表示→表示」に切り替わった時だけ、
+      // 現在の倍率を維持したまま神輿位置へ移動する。
       map.panTo(point);
     }
 
