@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '5';
+  const VERSION = '6';
   let token = sessionStorage.getItem('mikoshiAdminToken') || '';
   let busy = false;
   let currentPublicState = false;
@@ -88,6 +88,12 @@
             <button id="visibilityBtn" class="outline">確認中</button>
           </div>
 
+          <div id="simulationRecoveryCard" class="card hidden">
+            <h2>シミュレーション実行中</h2>
+            <div class="warning-note">シミュレーション用の位置データがサーバー上に残っています。テストを終了する場合は、ここからでも安全に初期化できます。</div>
+            <button id="simulationEndBtn" class="danger" style="margin-top:12px">シミュレーションを終了・初期化</button>
+          </div>
+
           <div class="card caution-card">
             <h2>初期化・消去</h2>
             <div class="warning-note">通常は操作しません。誤操作を防ぐため、実行前に確認画面が表示されます。</div>
@@ -137,6 +143,13 @@
         run('publicOn', '神輿位置を地図に表示する設定にしました。');
       }
     };
+
+    document.getElementById('simulationEndBtn').onclick = () =>
+      confirmRun(
+        'シミュレーションを終了・初期化',
+        'シミュレーションを終了し、神輿位置を非表示にして、通過記録を消去し、赤城神社の初期位置へ戻します。よろしいですか？',
+        'simulateEnd'
+      );
 
     document.getElementById('resetBtn').onclick = () =>
       confirmRun(
@@ -305,6 +318,16 @@
     h += '<div><strong>通過記録</strong>' + Number(state.trailCount || 0) + '点</div>';
 
     document.getElementById('stateInfo').innerHTML = h;
+
+    const recoveryCard =
+      document.getElementById('simulationRecoveryCard');
+
+    if (recoveryCard) {
+      recoveryCard.classList.toggle(
+        'hidden',
+        state.sessionMode !== 'simulation'
+      );
+    }
 
     const recording = document.getElementById('recordingStatus');
 

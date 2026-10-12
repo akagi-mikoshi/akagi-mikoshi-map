@@ -11,6 +11,7 @@
   let stopRequested = false;
   let callbackSeq = 0;
   let busy = false;
+  let serverSimulationActive = false;
 
   function loadCss(url) {
     return new Promise((resolve, reject) => {
@@ -66,6 +67,7 @@
         if (r.ok) {
           showControl();
           updateServerState(r.state);
+          restoreServerSimulationState(r.state);
           return;
         }
       } catch (e) {}
@@ -222,6 +224,7 @@
 
       showControl();
       updateServerState(r.state);
+      restoreServerSimulationState(r.state);
     } catch (e) {
       loginMessage(
         e.message === 'password'
@@ -379,7 +382,7 @@
     }
 
     busy = true;
-    setControlsDisabled(true);
+    setPreStartBusy(true);
 
     try {
       const r = await adminCall('simulateStart');
@@ -394,6 +397,7 @@
       stopRequested = false;
       paused = false;
       running = true;
+      serverSimulationActive = true;
 
       document.getElementById('runningBox')
         .classList.remove('hidden');
@@ -401,13 +405,12 @@
       document.getElementById('pauseBtn')
         .textContent = '一時停止';
 
-      setControlsDisabled(false);
-      document.getElementById('startBtn').disabled = true;
-
+      applyRunningControls();
       runLoop();
     } catch (e) {
       message('シミュレーションを開始できませんでした。', true);
-      setControlsDisabled(false);
+      setPreStartBusy(false);
+      applyIdleControls();
     } finally {
       busy = false;
     }
@@ -471,11 +474,13 @@
       index >= samples.length
     ) {
       running = false;
-      document.getElementById('startBtn').disabled = true;
-      document.getElementById('pauseBtn').disabled = true;
+      paused = false;
+      serverSimulationActive = true;
+
+      applyCompletedControls();
 
       setStatus(
-        '全てのダミー位置を送信しました。地図を確認後、「テスト終了・初期化」を押してください。',
+        '全てのダミー位置を送信しました。地図を確認後、必ず「テスト終了・初期化」を押してください。',
         'paused'
       );
     }
@@ -510,7 +515,7 @@
     running = false;
     paused = false;
 
-    setControlsDisabled(true);
+    setEndingBusy(true);
 
     try {
       const r = await adminCall('simulateEnd');
@@ -519,6 +524,7 @@
         throw new Error(r.error || 'end_failed');
       }
 
+      serverSimulationActive = false;
       updateServerState(r.state);
 
       index = 0;
@@ -529,16 +535,18 @@
       document.getElementById('runningBox')
         .classList.add('hidden');
 
-      message('テストを終了し、赤城神社の初期位置へ戻しました。', false);
+      applyIdleControls();
+
+      message('テストを終了し、通過記録を消去して赤城神社の初期位置へ戻しました。', false);
     } catch (e) {
+      serverSimulationActive = true;
+      applyRecoveryControls();
       message(
-        '終了処理に失敗しました。管理画面で「巡行を終了する」を実行してください。',
+        '終了処理に失敗しました。通信状態を確認して、もう一度「テスト終了・初期化」を押してください。',
         true
       );
     } finally {
-      setControlsDisabled(false);
-      document.getElementById('startBtn').disabled = false;
-      document.getElementById('pauseBtn').disabled = false;
+      setEndingBusy(false);
     }
   }
 
@@ -564,6 +572,9 @@
   function updateServerState(state) {
     const el = document.getElementById('serverState');
     if (!el || !state) return;
+
+    serverSimulationActive =
+      state.sessionMode === 'simulation';
 
     let text = '';
 
@@ -594,20 +605,139 @@
     el.textContent = text;
   }
 
-  function setControlsDisabled(value) {
-    document
-      .querySelectorAll(
-        '#controlBox select, #controlBox button'
-      )
-      .forEach(el => {
-        if (
-          el.id === 'endBtn' &&
-          running
-        ) {
-          return;
-        }
-        el.disabled = value;
-      });
+  function setPreStartBusy(value) {
+    [
+      'rangeSelect',
+      'intervalSelect',
+      'mapBtn',
+      'startBtn',
+      'pauseBtn',
+      'endBtn'
+    ].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = value;
+    });
+  }
+
+  function setEndingBusy(value) {
+    [
+      'rangeSelect',
+      'intervalSelect',
+      'mapBtn',
+      'startBtn',
+      'pauseBtn',
+      'endBtn'
+    ].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = value;
+    });
+
+    if (!value) {
+      if (serverSimulationActive) {
+        applyRecoveryControls();
+      } else {
+        applyIdleControls();
+      }
+    }
+  }
+
+  function applyIdleControls() {
+    const range = document.getElementById('rangeSelect');
+    const interval = document.getElementById('intervalSelect');
+    const mapBtn = document.getElementById('mapBtn');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const endBtn = document.getElementById('endBtn');
+
+    if (range) range.disabled = false;
+    if (interval) interval.disabled = false;
+    if (mapBtn) mapBtn.disabled = false;
+    if (startBtn) startBtn.disabled = false;
+    if (pauseBtn) pauseBtn.disabled = true;
+    if (endBtn) endBtn.disabled = true;
+  }
+
+  function applyRunningControls() {
+    const range = document.getElementById('rangeSelect');
+    const interval = document.getElementById('intervalSelect');
+    const mapBtn = document.getElementById('mapBtn');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const endBtn = document.getElementById('endBtn');
+
+    if (range) range.disabled = true;
+    if (interval) interval.disabled = true;
+    if (mapBtn) mapBtn.disabled = false;
+    if (startBtn) startBtn.disabled = true;
+    if (pauseBtn) pauseBtn.disabled = false;
+    if (endBtn) endBtn.disabled = false;
+  }
+
+  function applyCompletedControls() {
+    const range = document.getElementById('rangeSelect');
+    const interval = document.getElementById('intervalSelect');
+    const mapBtn = document.getElementById('mapBtn');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const endBtn = document.getElementById('endBtn');
+
+    if (range) range.disabled = true;
+    if (interval) interval.disabled = true;
+    if (mapBtn) mapBtn.disabled = false;
+    if (startBtn) startBtn.disabled = true;
+    if (pauseBtn) pauseBtn.disabled = true;
+    if (endBtn) endBtn.disabled = false;
+  }
+
+  function applyRecoveryControls() {
+    const range = document.getElementById('rangeSelect');
+    const interval = document.getElementById('intervalSelect');
+    const mapBtn = document.getElementById('mapBtn');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const endBtn = document.getElementById('endBtn');
+
+    if (range) range.disabled = true;
+    if (interval) interval.disabled = true;
+    if (mapBtn) mapBtn.disabled = false;
+    if (startBtn) startBtn.disabled = true;
+    if (pauseBtn) pauseBtn.disabled = true;
+    if (endBtn) endBtn.disabled = false;
+  }
+
+  function restoreServerSimulationState(state) {
+    if (!state || state.sessionMode !== 'simulation') {
+      serverSimulationActive = false;
+      applyIdleControls();
+      return;
+    }
+
+    serverSimulationActive = true;
+    running = false;
+    paused = false;
+    stopRequested = false;
+
+    document.getElementById('runningBox')
+      .classList.remove('hidden');
+
+    document.getElementById('pauseBtn')
+      .textContent = '一時停止';
+
+    document.getElementById('progressText')
+      .textContent = '—';
+
+    document.getElementById('currentPos')
+      .textContent = 'サーバー上にテストデータあり';
+
+    document.getElementById('bar')
+      .style.width = '100%';
+
+    setStatus(
+      '前回のシミュレーションがサーバー上で継続中です。送信の途中状態は復元できないため、「テスト終了・初期化」を押してから新しいテストを開始してください。',
+      'paused'
+    );
+
+    applyRecoveryControls();
   }
 
   function message(text, error) {
@@ -771,6 +901,13 @@
       resolve => setTimeout(resolve, ms)
     );
   }
+
+  window.addEventListener('beforeunload', event => {
+    if (running || serverSimulationActive) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+  });
 
   boot().catch(err => {
     console.error(err);
