@@ -38,3 +38,5 @@ body{display:flex;flex-direction:column}
 .legend-actual,.legend-plan{display:inline-block;width:24px;height:0}
 .legend-actual{border-top:5px solid #8A2D24;border-radius:3px}
 .legend-plan{border-top:4px dashed #586979}
+
+#simulationBadge{display:none;position:absolute;z-index:880;left:50%;top:10px;transform:translateX(-50%);background:#fff3cd;border:1px solid #c69419;color:#6a4c00;border-radius:7px;padding:6px 10px;font:700 12px Meiryo,sans-serif;box-shadow:0 1px 5px rgba(0,0,0,.18);pointer-events:none}

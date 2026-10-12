@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '4';
+  const VERSION = '5';
   let token = sessionStorage.getItem('mikoshiAdminToken') || '';
   let busy = false;
   let currentPublicState = false;
@@ -277,7 +277,12 @@
     let h = '';
 
     if (x) {
-      const src = x.source === 'default' ? '赤城神社（初期位置）' : 'GPS';
+      const src =
+        x.source === 'default'
+          ? '赤城神社（初期位置）'
+          : x.source === 'simulation'
+            ? 'シミュレーション'
+            : 'GPS';
       h += '<div><strong>保存中の位置</strong>' + esc(src) + '</div>';
       h += '<div><strong>最終受信</strong>' + esc(jpTime(x.receivedAt)) + '（' + esc(age(x.receivedAt)) + '）</div>';
 
@@ -310,7 +315,11 @@
 
       recording.textContent =
         state.isSessionActive
-          ? 'GPS位置の記録：記録中'
+          ? (
+              state.sessionMode === 'simulation'
+                ? 'GPS位置の記録：シミュレーション中'
+                : 'GPS位置の記録：記録中'
+            )
           : 'GPS位置の記録：停止中';
     }
   }

@@ -1,8 +1,11 @@
 (() => {
-  const VERSION = '4';
+  const VERSION = '5';
   const LEAFLET_CSS = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
   const LEAFLET_JS  = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
   const MIKOSHI_IMAGE = './mikoshi_marker.png?v=' + VERSION;
+  const TEST_MODE =
+    new URLSearchParams(window.location.search).get('test') === '1';
+  const POLL_INTERVAL_MS = TEST_MODE ? 2000 : 15000;
 
   let map = null;
   let marker = null;
@@ -60,6 +63,7 @@
           '<button id="scheduleButton" type="button">巡行予定を見る</button>' +
         '</div>' +
         '<button id="returnButton" class="map-ui-btn" type="button" disabled>神輿位置へ</button>' +
+        '<div id="simulationBadge">シミュレーション中</div>' +
         '<div id="routeLegend"><span class="legend-actual"></span>通過済み <span class="legend-plan"></span>予定</div>' +
         '<div id="schedulePanel" aria-hidden="true"></div>' +
       '</div>' +
@@ -768,7 +772,7 @@
 
   function scheduleNext() {
     if (pollTimer) clearTimeout(pollTimer);
-    pollTimer = setTimeout(loadPublicState, 15000);
+    pollTimer = setTimeout(loadPublicState, POLL_INTERVAL_MS);
   }
 
   function loadPublicState() {
@@ -808,6 +812,11 @@
   }
 
   function showState(state) {
+    setSimulationBadge(
+      !!(state && state.isSimulation) ||
+      !!(state && state.latest && state.latest.source === 'simulation')
+    );
+
     if (!state || !state.isPublic) {
       hideCurrentLocation();
       updateActualTrail([]);
@@ -914,6 +923,8 @@
     let sourceText = '';
     if (data.source === 'default') {
       sourceText = '　赤城神社（初期位置）';
+    } else if (data.source === 'simulation') {
+      sourceText = '　【テスト位置】';
     }
 
     document.getElementById('status').textContent =
@@ -924,12 +935,21 @@
       '<strong>神輿の現在位置</strong><br>' +
       (data.source === 'default'
         ? '赤城神社（初期位置）<br>'
-        : '') +
+        : data.source === 'simulation'
+          ? '<strong>シミュレーション中</strong><br>'
+          : '') +
       '最終更新 ' + timeText +
       (Number.isFinite(accuracy) && accuracy > 0
         ? '<br>位置精度：約' + Math.round(accuracy) + 'm'
         : '')
     );
+  }
+
+  function setSimulationBadge(show) {
+    const badge = document.getElementById('simulationBadge');
+    if (!badge) return;
+
+    badge.style.display = show ? 'block' : 'none';
   }
 
   function refreshImmediately() {
