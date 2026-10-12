@@ -1,0 +1,1 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><button onclick="go()">test</button><pre id="o"></pre><script>async function go(){let t=performance.now(),r=await fetch("size-test.html?"+Date.now(),{cache:"no-store"}),x=await r.text();o.textContent=((performance.now()-t)/1000).toFixed(2)+" sec / "+x.length}</script>
