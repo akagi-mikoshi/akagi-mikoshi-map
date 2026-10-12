@@ -36,3 +36,7 @@ button:disabled{opacity:.5;cursor:default}
 .hidden{display:none!important}
 .small-btn{min-height:40px;font-size:13px;font-weight:normal}
 .footer{text-align:center;color:#777;font-size:11px;padding:6px 0 16px}
+
+.recording-status{margin-top:10px;padding:8px 10px;border-radius:7px;font-size:13px;font-weight:bold}
+.recording-on{background:#e8f5eb;color:#215d31}
+.recording-off{background:#f0f0f0;color:#555}

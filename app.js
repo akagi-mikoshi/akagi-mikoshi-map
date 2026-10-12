@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '3';
+  const VERSION = '4';
   const LEAFLET_CSS = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
   const LEAFLET_JS  = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
   const MIKOSHI_IMAGE = './mikoshi_marker.png?v=' + VERSION;
@@ -14,6 +14,15 @@
   let plannedRouteGroup = null;
   let routeBounds = null;
   let routeVisible = true;
+
+  let actualTrailLayer = null;
+  let actualTrailVisible = true;
+  let actualTrailHasData = false;
+
+  let routeVertices = [];
+  let routeEdges = [];
+  let routeTotalLength = 0;
+
   const stopMarkers = new Map();
 
   function loadStylesheet(url) {
@@ -47,9 +56,11 @@
         '<div id="mapControlsPanel" aria-hidden="true">' +
           '<button id="fitRouteQuickButton" type="button">予定経路全体を表示</button>' +
           '<button id="toggleRouteButton" type="button">予定経路を非表示にする</button>' +
+          '<button id="toggleActualTrailButton" type="button" disabled>通過済み経路：まだありません</button>' +
           '<button id="scheduleButton" type="button">巡行予定を見る</button>' +
         '</div>' +
         '<button id="returnButton" class="map-ui-btn" type="button" disabled>神輿位置へ</button>' +
+        '<div id="routeLegend"><span class="legend-actual"></span>通過済み <span class="legend-plan"></span>予定</div>' +
         '<div id="schedulePanel" aria-hidden="true"></div>' +
       '</div>' +
       '<div id="status"></div>' +
@@ -84,6 +95,7 @@
 
     initializeMap();
     addPlannedRoute();
+    buildRouteModel();
     buildSchedulePanel();
     wireMapUi();
 
@@ -169,7 +181,7 @@
         '<strong>巡行予定</strong>' +
         '<button id="scheduleClose" type="button" aria-label="閉じる">×</button>' +
       '</div>' +
-      '<div class="schedule-summary">予定巡行路は地図上の点線です。地点を選ぶと、その場所を地図で確認できます。</div>' +
+      '<div class="schedule-summary">灰色の点線が予定巡行路、赤茶色の実線が通過済み経路です。地点を選ぶと、その場所を地図で確認できます。</div>' +
       '<button id="fitRouteButton" type="button">予定ルート全体を表示</button>' +
       '<div class="schedule-list">';
 
@@ -218,6 +230,10 @@
       setRouteVisible(!routeVisible);
     });
 
+    document.getElementById('toggleActualTrailButton').addEventListener('click', () => {
+      setActualTrailVisible(!actualTrailVisible);
+    });
+
     document.getElementById('scheduleButton').addEventListener('click', () => {
       closeMapControls();
       const panel = document.getElementById('schedulePanel');
@@ -260,6 +276,419 @@
         ? '予定経路を非表示にする'
         : '予定経路を表示する';
     }
+  }
+
+  function setActualTrailVisible(visible) {
+    actualTrailVisible = visible;
+
+    if (actualTrailLayer) {
+      if (visible && actualTrailHasData) {
+        if (!map.hasLayer(actualTrailLayer)) {
+          actualTrailLayer.addTo(map);
+        }
+      } else if (map.hasLayer(actualTrailLayer)) {
+        map.removeLayer(actualTrailLayer);
+      }
+    }
+
+    updateActualTrailButton();
+  }
+
+  function updateActualTrailButton() {
+    const button = document.getElementById('toggleActualTrailButton');
+    if (!button) return;
+
+    button.disabled = !actualTrailHasData;
+
+    if (!actualTrailHasData) {
+      button.textContent = '通過済み経路：まだありません';
+      return;
+    }
+
+    button.textContent = actualTrailVisible
+      ? '通過済み経路を非表示にする'
+      : '通過済み経路を表示する';
+  }
+
+  function buildRouteModel() {
+    const data = window.MIKOSHI_ROUTE_DATA;
+
+    routeVertices = [];
+    routeEdges = [];
+    routeTotalLength = 0;
+
+    if (!data || !Array.isArray(data.segments)) return;
+
+    const all = [];
+
+    data.segments.forEach(segment => {
+      if (!Array.isArray(segment.coordinates)) return;
+
+      segment.coordinates.forEach(coord => {
+        if (
+          !Array.isArray(coord) ||
+          coord.length < 2
+        ) return;
+
+        const point = [
+          Number(coord[0]),
+          Number(coord[1])
+        ];
+
+        if (
+          !Number.isFinite(point[0]) ||
+          !Number.isFinite(point[1])
+        ) return;
+
+        const prev = all[all.length - 1];
+
+        if (
+          prev &&
+          Math.abs(prev[0] - point[0]) < 1e-9 &&
+          Math.abs(prev[1] - point[1]) < 1e-9
+        ) {
+          return;
+        }
+
+        all.push(point);
+      });
+    });
+
+    if (all.length < 2) return;
+
+    routeVertices.push({
+      lat: all[0][0],
+      lon: all[0][1],
+      progress: 0
+    });
+
+    for (let i = 1; i < all.length; i++) {
+      const a = all[i - 1];
+      const b = all[i];
+      const length = distanceMeters(a, b);
+
+      if (!Number.isFinite(length) || length <= 0) continue;
+
+      const start = routeTotalLength;
+      routeTotalLength += length;
+
+      routeEdges.push({
+        a: a,
+        b: b,
+        start: start,
+        length: length
+      });
+
+      routeVertices.push({
+        lat: b[0],
+        lon: b[1],
+        progress: routeTotalLength
+      });
+    }
+  }
+
+  function updateActualTrail(trail) {
+    const points = Array.isArray(trail) ? trail : [];
+    const progress = findRouteProgress(points);
+
+    if (
+      !Number.isFinite(progress) ||
+      progress < 3
+    ) {
+      actualTrailHasData = false;
+
+      if (actualTrailLayer) {
+        actualTrailLayer.setLatLngs([]);
+
+        if (map.hasLayer(actualTrailLayer)) {
+          map.removeLayer(actualTrailLayer);
+        }
+      }
+
+      updateActualTrailButton();
+      return;
+    }
+
+    const line = routeCoordinatesUntil(progress);
+
+    if (line.length < 2) {
+      actualTrailHasData = false;
+      updateActualTrailButton();
+      return;
+    }
+
+    actualTrailHasData = true;
+
+    if (!actualTrailLayer) {
+      actualTrailLayer = L.polyline(line, {
+        color: '#8A2D24',
+        weight: 7,
+        opacity: 0.92,
+        lineCap: 'round',
+        lineJoin: 'round'
+      });
+    } else {
+      actualTrailLayer.setLatLngs(line);
+    }
+
+    if (
+      actualTrailVisible &&
+      !map.hasLayer(actualTrailLayer)
+    ) {
+      actualTrailLayer.addTo(map);
+    }
+
+    updateActualTrailButton();
+  }
+
+  function findRouteProgress(trail) {
+    if (
+      !routeEdges.length ||
+      !Array.isArray(trail) ||
+      !trail.length
+    ) {
+      return null;
+    }
+
+    let progress = null;
+    let lastTime = null;
+
+    for (const raw of trail) {
+      const point = trailPoint_(raw);
+
+      if (!point) continue;
+
+      const time = point.time
+        ? new Date(point.time).getTime()
+        : null;
+
+      let maxForward = Infinity;
+
+      if (
+        progress !== null &&
+        lastTime !== null &&
+        Number.isFinite(time)
+      ) {
+        const elapsedSec =
+          Math.max(0, (time - lastTime) / 1000);
+
+        // 神輿の通常速度より十分余裕を持たせる。
+        // 長時間更新が空いた場合は、その分だけ前方への許容量も増やす。
+        maxForward = Math.max(
+          220,
+          Math.min(1600, 120 + elapsedSec * 2.2)
+        );
+      }
+
+      const candidate = nearestRouteProjection_(
+        [point.lat, point.lon],
+        progress,
+        maxForward
+      );
+
+      if (
+        candidate &&
+        candidate.distance <= 70
+      ) {
+        progress =
+          progress === null
+            ? candidate.progress
+            : Math.max(progress, candidate.progress);
+
+        if (Number.isFinite(time)) {
+          lastTime = time;
+        }
+      }
+    }
+
+    return progress;
+  }
+
+  function nearestRouteProjection_(point, currentProgress, maxForward) {
+    let best = null;
+
+    for (const edge of routeEdges) {
+      const p = projectToEdge_(point, edge);
+
+      if (!p) continue;
+
+      if (currentProgress !== null) {
+        // GPS揺れによる少しの後戻りは許容するが、
+        // 大きな後戻りや不自然な先飛びは候補から外す。
+        if (p.progress < currentProgress - 90) {
+          continue;
+        }
+
+        if (
+          Number.isFinite(maxForward) &&
+          p.progress > currentProgress + maxForward
+        ) {
+          continue;
+        }
+      }
+
+      if (
+        !best ||
+        p.distance < best.distance
+      ) {
+        best = p;
+      }
+    }
+
+    return best;
+  }
+
+  function projectToEdge_(point, edge) {
+    const lat0 =
+      (point[0] + edge.a[0] + edge.b[0]) / 3;
+
+    const kLat = 111320;
+    const kLon =
+      111320 *
+      Math.cos(lat0 * Math.PI / 180);
+
+    const ax = edge.a[1] * kLon;
+    const ay = edge.a[0] * kLat;
+    const bx = edge.b[1] * kLon;
+    const by = edge.b[0] * kLat;
+    const px = point[1] * kLon;
+    const py = point[0] * kLat;
+
+    const dx = bx - ax;
+    const dy = by - ay;
+    const denom = dx * dx + dy * dy;
+
+    if (denom <= 0) return null;
+
+    let t =
+      ((px - ax) * dx + (py - ay) * dy) /
+      denom;
+
+    t = Math.max(0, Math.min(1, t));
+
+    const qx = ax + t * dx;
+    const qy = ay + t * dy;
+
+    const distance =
+      Math.sqrt(
+        (px - qx) * (px - qx) +
+        (py - qy) * (py - qy)
+      );
+
+    return {
+      distance: distance,
+      progress: edge.start + edge.length * t,
+      lat: edge.a[0] + (edge.b[0] - edge.a[0]) * t,
+      lon: edge.a[1] + (edge.b[1] - edge.a[1]) * t
+    };
+  }
+
+  function routeCoordinatesUntil(progress) {
+    if (
+      !routeVertices.length ||
+      !Number.isFinite(progress)
+    ) {
+      return [];
+    }
+
+    const clamped =
+      Math.max(
+        0,
+        Math.min(routeTotalLength, progress)
+      );
+
+    const result = [];
+
+    for (const v of routeVertices) {
+      if (v.progress <= clamped) {
+        result.push([v.lat, v.lon]);
+      } else {
+        break;
+      }
+    }
+
+    const edge = routeEdges.find(e =>
+      clamped >= e.start &&
+      clamped <= e.start + e.length
+    );
+
+    if (edge) {
+      const t =
+        edge.length > 0
+          ? (clamped - edge.start) / edge.length
+          : 0;
+
+      const endPoint = [
+        edge.a[0] + (edge.b[0] - edge.a[0]) * t,
+        edge.a[1] + (edge.b[1] - edge.a[1]) * t
+      ];
+
+      const last = result[result.length - 1];
+
+      if (
+        !last ||
+        distanceMeters(last, endPoint) > 1
+      ) {
+        result.push(endPoint);
+      }
+    }
+
+    return result;
+  }
+
+  function trailPoint_(raw) {
+    if (Array.isArray(raw)) {
+      const lat = Number(raw[0]);
+      const lon = Number(raw[1]);
+
+      if (
+        Number.isFinite(lat) &&
+        Number.isFinite(lon)
+      ) {
+        return {
+          lat: lat,
+          lon: lon,
+          time: raw[2] || null
+        };
+      }
+    }
+
+    if (raw && typeof raw === 'object') {
+      const lat = Number(raw.lat);
+      const lon = Number(raw.lon);
+
+      if (
+        Number.isFinite(lat) &&
+        Number.isFinite(lon)
+      ) {
+        return {
+          lat: lat,
+          lon: lon,
+          time: raw.receivedAt || raw.time || null
+        };
+      }
+    }
+
+    return null;
+  }
+
+  function distanceMeters(a, b) {
+    const R = 6371000;
+    const toRad = Math.PI / 180;
+
+    const p1 = a[0] * toRad;
+    const p2 = b[0] * toRad;
+    const dp = (b[0] - a[0]) * toRad;
+    const dl = (b[1] - a[1]) * toRad;
+
+    const x =
+      Math.sin(dp / 2) * Math.sin(dp / 2) +
+      Math.cos(p1) *
+      Math.cos(p2) *
+      Math.sin(dl / 2) *
+      Math.sin(dl / 2);
+
+    return 2 * R * Math.asin(Math.sqrt(x));
   }
 
   function closeMapControls() {
@@ -381,6 +810,7 @@
   function showState(state) {
     if (!state || !state.isPublic) {
       hideCurrentLocation();
+      updateActualTrail([]);
       document.getElementById('status').textContent =
         '神輿の現在位置：地図に表示していません';
       return;
@@ -388,12 +818,14 @@
 
     if (!state.latest) {
       hideCurrentLocation();
+      updateActualTrail([]);
       document.getElementById('status').textContent =
         '神輿の現在位置：位置情報を待っています';
       return;
     }
 
     showLocation(state.latest);
+    updateActualTrail(state.trail || []);
   }
 
   function hideCurrentLocation() {

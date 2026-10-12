@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '2';
+  const VERSION = '4';
   let token = sessionStorage.getItem('mikoshiAdminToken') || '';
   let busy = false;
   let currentPublicState = false;
@@ -64,6 +64,7 @@
             <div id="publicStatus" class="status off"><span class="dot"></span><span>確認中</span></div>
             <div class="muted status-help">一般向けWebページ自体は公開されたままです。ここでは、地図上に神輿位置を見せるかどうかを示します。</div>
             <div id="stateInfo" class="info state-info"></div>
+            <div id="recordingStatus" class="recording-status"></div>
             <div id="mainMessage"></div>
           </div>
         </div>
@@ -76,8 +77,8 @@
               <button id="endBtn" class="danger">巡行を終了する</button>
             </div>
             <div class="operation-note">
-              <div><strong>巡行を開始する：</strong>位置履歴を初期化し、赤城神社を初期位置として、一般向け地図への神輿位置表示を開始します。</div>
-              <div><strong>巡行を終了する：</strong>神輿位置の表示を停止し、位置履歴を消去して、位置データを赤城神社へ戻します。</div>
+              <div><strong>巡行を開始する：</strong>位置履歴を初期化し、追跡用スマホから届くGPS位置の記録を開始します。赤城神社を初期位置として、一般向け地図への神輿位置表示も開始します。</div>
+              <div><strong>巡行を終了する：</strong>GPS位置の記録と地図上の神輿位置表示を停止し、位置履歴を消去して、位置データを赤城神社へ戻します。</div>
             </div>
           </div>
 
@@ -114,14 +115,14 @@
     document.getElementById('startBtn').onclick = () =>
       confirmRun(
         '巡行を開始する',
-        '位置履歴を初期化し、赤城神社を初期位置として、一般向け地図への神輿位置表示を開始します。よろしいですか？',
+        '位置履歴を初期化し、追跡用スマホから届くGPS位置の記録を開始します。赤城神社を初期位置として、一般向け地図への神輿位置表示も開始します。よろしいですか？',
         'start'
       );
 
     document.getElementById('endBtn').onclick = () =>
       confirmRun(
         '巡行を終了する',
-        '一般向け地図での神輿位置表示を停止し、位置履歴を消去して、位置データを赤城神社へ戻します。よろしいですか？',
+        'GPS位置の記録と一般向け地図での神輿位置表示を停止し、位置履歴を消去して、位置データを赤城神社へ戻します。よろしいですか？',
         'end'
       );
 
@@ -140,7 +141,7 @@
     document.getElementById('resetBtn').onclick = () =>
       confirmRun(
         '赤城神社の位置へリセット',
-        '一般向け地図での神輿位置表示を停止し、位置履歴を消去して、現在位置データを赤城神社へ戻します。よろしいですか？',
+        'GPS位置の記録と一般向け地図での神輿位置表示を停止し、位置履歴を消去して、現在位置データを赤城神社へ戻します。よろしいですか？',
         'resetDefault'
       );
 
@@ -295,9 +296,23 @@
       h += '<div><strong>保存中の位置</strong>未登録</div>';
     }
 
-    h += '<div><strong>履歴件数</strong>' + Number(state.historyCount || 0) + '件</div>';
+    h += '<div><strong>直近確認履歴</strong>' + Number(state.historyCount || 0) + '件</div>';
+    h += '<div><strong>通過記録</strong>' + Number(state.trailCount || 0) + '点</div>';
 
     document.getElementById('stateInfo').innerHTML = h;
+
+    const recording = document.getElementById('recordingStatus');
+
+    if (recording) {
+      recording.className =
+        'recording-status ' +
+        (state.isSessionActive ? 'recording-on' : 'recording-off');
+
+      recording.textContent =
+        state.isSessionActive
+          ? 'GPS位置の記録：記録中'
+          : 'GPS位置の記録：停止中';
+    }
   }
 
   function jpTime(v) {
