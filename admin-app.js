@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '14';
+  const VERSION = '15';
   let token = sessionStorage.getItem('mikoshiAdminToken') || '';
   let busy = false;
   let currentPublicState = false;
@@ -53,7 +53,7 @@
     document.body.innerHTML = `
       <div class="wrap">
         <div class="card">
-          <div class="title-row"><h1>赤城神社 神輿位置 管理</h1><span class="version-badge">RC3-D2.2</span></div>
+          <div class="title-row"><h1>赤城神社 神輿位置 管理</h1><span class="version-badge">RC3-D2.3</span></div>
           <div id="loginBox">
             <label for="password">管理用パスワード</label>
             <input id="password" type="password" autocomplete="current-password">

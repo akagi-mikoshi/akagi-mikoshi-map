@@ -1,6 +1,6 @@
 (() => {
-  const VERSION = '4';
-  const SYSTEM_VERSION = 'RC3-D2.2';
+  const VERSION = '5';
+  const SYSTEM_VERSION = 'RC3-D2.3';
   const LEAFLET_CSS =
     'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
   const LEAFLET_JS =
@@ -168,10 +168,10 @@
             <table class="kv">
               <tr><th>システムバージョン</th><td>${SYSTEM_VERSION}</td></tr>
               <tr><th>Backend</th><td id="backendVersion">—</td></tr>
-              <tr><th>公開地図</th><td>app v11</td></tr>
-              <tr><th>管理画面</th><td>admin v14</td></tr>
-              <tr><th>診断画面</th><td>debug v4</td></tr>
-              <tr><th>シミュレーション</th><td>simulator v10</td></tr>
+              <tr><th>公開地図</th><td>app v12</td></tr>
+              <tr><th>管理画面</th><td>admin v15</td></tr>
+              <tr><th>診断画面</th><td>debug v5</td></tr>
+              <tr><th>シミュレーション</th><td>simulator v11</td></tr>
               <tr><th>巡行ルート・予定データ</th><td><span id="routeDataInfo">—</span> <button class="inline-info" data-info="routeData">ⓘ</button></td></tr>
               <tr><th>サーバー時刻</th><td id="serverTime">—</td></tr>
               <tr><th>神輿位置の表示開始時刻</th><td id="publicSince">—</td></tr>
@@ -402,7 +402,8 @@
       msg.className = 'message error';
       msg.textContent = '診断用の最終受信情報を消去できませんでした。';
     } finally {
-      btn.disabled = false;
+      btn.disabled =
+        !(lastDebug && lastDebug.lastIngest);
     }
   }
 
@@ -488,6 +489,17 @@
         ? 'ok'
         : (ingest ? 'warn' : 'neutral')
     );
+
+    const clearLastIngestBtn =
+      document.getElementById('clearLastIngestBtn');
+
+    if (clearLastIngestBtn) {
+      clearLastIngestBtn.disabled = !ingest;
+      clearLastIngestBtn.title =
+        ingest
+          ? ''
+          : '消去する診断用の最終受信情報はありません';
+    }
 
     document.getElementById('deviceIdentifier').textContent =
       ingest && ingest.deviceIdentifier

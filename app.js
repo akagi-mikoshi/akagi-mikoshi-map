@@ -1,12 +1,12 @@
 (() => {
-  const VERSION = '11';
+  const VERSION = '12';
   const LEAFLET_CSS = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
   const LEAFLET_JS  = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
   const MIKOSHI_IMAGE = './mikoshi_marker.png?v=' + VERSION;
   const TEST_MODE =
     new URLSearchParams(window.location.search).get('test') === '1';
   const POLL_INTERVAL_MS = TEST_MODE ? 2000 : 15000;
-  const SYSTEM_VERSION = 'RC3-D2.2';
+  const SYSTEM_VERSION = 'RC3-D2.3';
   let currentNoticeId = null;
   let currentNoticeHistory = [];
 
@@ -83,8 +83,8 @@
         '<div id="schedulePanel" aria-hidden="true"></div>' +
       '</div>' +
       '<div id="status"></div>' +
-      '<div id="note">※予定時刻は進行状況により前後する場合があります。休憩中などは位置情報の更新間隔が空くことがあります。GPSや通信状況により、実際の場所から多少ずれる場合があります。</div>' +
       '<div id="updateInfo"><div class="update-main"><strong>自動更新：約' + (POLL_INTERVAL_MS / 1000) + '秒ごと</strong><button id="updateInfoBtn" class="inline-info" type="button" aria-label="更新について">ⓘ</button></div><div class="update-version">' + SYSTEM_VERSION + '</div></div>' +
+      '<div id="note">※予定時刻は進行状況により前後する場合があります。休憩中などは位置情報の更新間隔が空くことがあります。GPSや通信状況により、実際の場所から多少ずれる場合があります。</div>' +
       '<div id="publicInfoModal" class="modal hidden"><div class="modal-card"><div class="modal-head"><strong>自動更新について</strong><button id="publicInfoClose" type="button">×</button></div><div class="modal-body">このページを開いている間、位置情報とお知らせを自動的に更新します。スマートフォンへのプッシュ通知ではないため、ページを閉じている間に通知が届く機能ではありません。</div></div></div>';
   }
 
@@ -1185,9 +1185,15 @@
 
   function setSimulationBadge(show) {
     const badge = document.getElementById('simulationBadge');
-    if (!badge) return;
+    const wrap = document.getElementById('mapWrap');
 
-    badge.style.display = show ? 'block' : 'none';
+    if (badge) {
+      badge.style.display = show ? 'block' : 'none';
+    }
+
+    if (wrap) {
+      wrap.classList.toggle('simulation-active', !!show);
+    }
   }
 
   function refreshImmediately() {

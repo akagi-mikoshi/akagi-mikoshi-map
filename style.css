@@ -13,7 +13,7 @@ body{display:flex;flex-direction:column}
 .mikoshi-pin::after{content:"";position:absolute;left:27px;top:62px;width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:15px solid #8A2D24;z-index:1}
 .map-ui-btn{position:absolute;z-index:800;background:#fff;border:1px solid rgba(0,0,0,.28);border-radius:6px;box-shadow:0 1px 5px rgba(0,0,0,.25);min-height:38px;padding:7px 10px;font:700 13px Meiryo,sans-serif;color:#333}
 #mapControlsButton{top:10px;right:10px}
-#returnButton{left:6px;bottom:20px;min-height:36px;padding:6px 9px;font:700 13px Meiryo,sans-serif}
+#returnButton{left:6px;bottom:20px;min-height:38px;padding:7px 10px;font:700 13px Meiryo,sans-serif}
 #returnButton:disabled{opacity:.48}
 #mapControlsPanel{display:none;position:absolute;z-index:850;top:54px;right:10px;width:190px;background:#fff;border:1px solid rgba(0,0,0,.20);border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.28);padding:7px}
 #mapControlsPanel.open{display:grid;gap:6px}
@@ -34,7 +34,7 @@ body{display:flex;flex-direction:column}
 .leaflet-popup-content{font-family:Meiryo,sans-serif;line-height:1.5}
 @media (max-height:560px){#schedulePanel{max-height:65%}#note{font-size:10px}}
 
-#routeLegend{position:absolute;z-index:790;right:6px;bottom:20px;display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:4px;max-width:calc(100% - 112px);min-height:36px;background:rgba(255,255,255,.94);border:1px solid rgba(0,0,0,.16);border-radius:6px;padding:5px 6px;font:10.5px Meiryo,sans-serif;color:#444;box-shadow:0 1px 4px rgba(0,0,0,.16)}
+#routeLegend{position:absolute;z-index:790;right:6px;bottom:20px;display:flex;align-items:center;gap:5px;white-space:nowrap;background:rgba(255,255,255,.94);border:1px solid rgba(0,0,0,.16);border-radius:6px;padding:5px 7px;font:11px Meiryo,sans-serif;color:#444;box-shadow:0 1px 4px rgba(0,0,0,.16)}
 .legend-actual,.legend-plan{display:inline-block;width:19px;height:0}
 .legend-actual{border-top:5px solid #8A2D24;border-radius:3px}
 .legend-plan{border-top:4px dashed #586979}
@@ -53,9 +53,9 @@ body{display:flex;flex-direction:column}
 #noticeClose{flex:0 0 auto;width:36px;height:36px;border:0;border-radius:50%;background:rgba(255,255,255,.75);font-size:21px}
 #noticeText{font-size:15px;line-height:1.7;font-weight:600}
 #noticeUpdated{font-size:11px;margin-top:7px;opacity:.72}
-.notice-collapsed{position:absolute;z-index:810;top:56px;left:10px;border:1px solid #c7a74e;background:rgba(255,248,223,.96);color:#4b3a0d;border-radius:999px;padding:6px 10px;font:700 11px Meiryo,sans-serif;box-shadow:0 1px 5px rgba(0,0,0,.20)}
+.notice-collapsed{position:absolute;z-index:810;top:10px;left:50%;transform:translateX(-50%);border:1px solid #c7a74e;background:rgba(255,248,223,.96);color:#4b3a0d;border-radius:999px;padding:6px 10px;font:700 11px Meiryo,sans-serif;box-shadow:0 1px 5px rgba(0,0,0,.20);white-space:nowrap}
 .notice-collapsed.hidden{display:none}
-#updateInfo{display:none;flex:0 0 auto;padding:4px 8px 5px 48px;background:#f7f7f7;border-top:1px solid #eee;color:#555;font-size:11px;line-height:1.35;text-align:right}
+#updateInfo{display:none;flex:0 0 auto;padding:0 8px 3px 48px;background:#fff;color:#555;font-size:11px;line-height:1.35;text-align:right}
 .inline-info{width:24px;height:24px;border-radius:50%;border:1px solid #bbb;background:#f2f2f2;color:#444;font-size:12px;padding:0;margin-left:2px;vertical-align:middle}
 .version-badge{display:inline-block;border-radius:999px;background:#eee;color:#666;padding:2px 7px;font-size:10px;font-weight:bold;white-space:nowrap}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:5000;display:flex;align-items:center;justify-content:center;padding:16px}
@@ -79,9 +79,11 @@ body{display:flex;flex-direction:column}
 .update-version{margin-top:1px;font-size:9px;color:#777;text-align:right}
 
 @media (max-width:430px){
-  #returnButton{font-size:12px;padding:5px 8px}
-  #routeLegend{font-size:9.5px;gap:3px;max-width:calc(100% - 108px);padding:4px 5px}
+  #returnButton{font-size:13px;padding:7px 10px}
+  #routeLegend{font-size:10px;gap:4px;padding:4px 6px}
   .legend-actual,.legend-plan{width:16px}
   .legend-stop{width:10px;height:10px;border-width:2px}
   #noticeDock,.notice-history-panel{left:8px;right:8px}
 }
+
+#mapWrap.simulation-active .notice-collapsed{top:48px}

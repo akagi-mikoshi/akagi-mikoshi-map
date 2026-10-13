@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '3';
+  const VERSION = '4';
 
   function loadCss(url) {
     return new Promise((resolve, reject) => {
@@ -20,7 +20,7 @@
         <div class="card">
           <div class="title-row">
             <h1>当日操作マニュアル</h1>
-            <span class="version-badge">RC3-D2.2</span>
+            <span class="version-badge">RC3-D2.3</span>
           </div>
           <p>赤城神社例大祭　神輿現在地案内システム</p>
           <div class="notice">
@@ -122,7 +122,7 @@
           </div>
         </div>
 
-        <div class="footer">RC3-D2.2　オンラインマニュアル</div>
+        <div class="footer">RC3-D2.3　オンラインマニュアル</div>
       </div>
     `;
   }
