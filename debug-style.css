@@ -1,0 +1,45 @@
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#f5f3f1;color:#242424;font-family:Meiryo,"Hiragino Kaku Gothic ProN",sans-serif}
+body{padding:12px}
+.wrap{max-width:920px;margin:0 auto}
+.card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+h1{font-size:22px;margin:0 0 10px}
+h2{font-size:17px;margin:0 0 10px}
+label{display:block;font-size:13px;font-weight:bold;margin-bottom:6px}
+input{width:100%;font-size:18px;padding:12px;border:1px solid #aaa;border-radius:8px}
+button{width:100%;min-height:44px;margin-top:10px;border:0;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer}
+.primary{background:#8A2D24;color:#fff}
+.secondary{background:#eee;color:#222;border:1px solid #bbb}
+.hidden{display:none!important}
+.message{margin-top:10px;padding:10px;border-radius:8px;background:#f1f1f1;font-size:13px;line-height:1.6}
+.message.error{background:#fdecec;color:#7b1f1f}
+.summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tile{border:1px solid #ddd;border-radius:9px;padding:10px;background:#fafafa}
+.tile .label{font-size:12px;color:#666;margin-bottom:4px}
+.tile .value{font-size:16px;font-weight:bold;line-height:1.45;overflow-wrap:anywhere}
+.ok{color:#256b36}.warn{color:#8a5c00}.bad{color:#a12222}.neutral{color:#444}
+.diagnosis{border-left:5px solid #777;background:#f7f7f7;padding:11px 12px;border-radius:8px;line-height:1.65;font-size:14px}
+.diagnosis.ok{border-left-color:#2f7d46;background:#eef8f0;color:#214d2d}
+.diagnosis.warn{border-left-color:#c18a18;background:#fff7df;color:#634a0b}
+.diagnosis.bad{border-left-color:#b3261e;background:#fff0ef;color:#6e211c}
+.kv{width:100%;border-collapse:collapse;font-size:13px}
+.kv th,.kv td{padding:7px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:left}
+.kv th{width:34%;color:#555;font-weight:normal}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-wrap:anywhere}
+#map{height:330px;border-radius:10px;border:1px solid #bbb;background:#eee}
+.mapButtons{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mapButtons button{margin-top:8px}
+.history{width:100%;border-collapse:collapse;font-size:12px}
+.history th,.history td{border-bottom:1px solid #eee;padding:6px 4px;text-align:left;white-space:nowrap}
+.history td.coords{white-space:normal}
+.toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.toolbar button{margin-top:0}
+.muted{font-size:12px;color:#666;line-height:1.6}
+.footer{text-align:center;color:#777;font-size:11px;padding:4px 0 12px}
+@media(max-width:600px){
+  .summary{grid-template-columns:1fr}
+  .toolbar,.mapButtons{grid-template-columns:1fr}
+  #map{height:290px}
+  .history{font-size:11px}
+}

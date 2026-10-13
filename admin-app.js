@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '10';
+  const VERSION = '11';
   let token = sessionStorage.getItem('mikoshiAdminToken') || '';
   let busy = false;
   let currentPublicState = false;
@@ -109,6 +109,7 @@
             <h2>管理</h2>
             <div class="stack">
               <button id="refreshBtn" class="small-btn">現在の状態を再確認</button>
+              <button id="debugBtn" class="small-btn">診断画面を開く</button>
               <button id="logoutBtn" class="small-btn">ログアウト</button>
             </div>
           </div>
@@ -168,6 +169,9 @@
       );
 
     document.getElementById('refreshBtn').onclick = refresh;
+    document.getElementById('debugBtn').onclick = () => {
+      window.open('./debug.html', '_blank');
+    };
     document.getElementById('logoutBtn').onclick = logout;
   }
 
