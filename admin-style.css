@@ -21,7 +21,7 @@ input[type=password]{width:100%;font-size:18px;padding:12px;border:1px solid #aa
 button{width:100%;min-height:48px;border:0;border-radius:9px;padding:10px 12px;font-size:16px;font-weight:bold;cursor:pointer;background:#e5e5e5;color:#222}
 button:disabled{opacity:.5;cursor:default}
 .primary{background:#8A2D24;color:#fff}
-.safe{background:#245f36;color:#fff}
+.safe{background:#278444;color:#fff}
 .danger{background:#b3261e;color:#fff}
 .outline{background:#fff;border:1px solid #8A2D24;color:#8A2D24}
 .caution{background:#fff7ed;border:1px solid #bc7b42;color:#6a3d16}

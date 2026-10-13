@@ -1,13 +1,14 @@
 (() => {
-  const VERSION = '10';
+  const VERSION = '11';
   const LEAFLET_CSS = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
   const LEAFLET_JS  = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
   const MIKOSHI_IMAGE = './mikoshi_marker.png?v=' + VERSION;
   const TEST_MODE =
     new URLSearchParams(window.location.search).get('test') === '1';
   const POLL_INTERVAL_MS = TEST_MODE ? 2000 : 15000;
-  const SYSTEM_VERSION = 'RC3-D2.1';
+  const SYSTEM_VERSION = 'RC3-D2.2';
   let currentNoticeId = null;
+  let currentNoticeHistory = [];
 
   let map = null;
   let marker = null;
@@ -55,16 +56,20 @@
   function installBody() {
     document.body.innerHTML =
       '<div id="message">地図の準備をしています…</div>' +
-      '<div id="noticeDock" class="hidden">' +
-        '<div id="noticePanel" class="notice-panel">' +
-          '<div class="notice-head"><strong id="noticeTitle">お知らせ</strong><button id="noticeClose" type="button" aria-label="閉じる">×</button></div>' +
-          '<div id="noticeText"></div>' +
-          '<div id="noticeUpdated"></div>' +
-        '</div>' +
-      '</div>' +
       '<div id="mapWrap">' +
         '<div id="map"></div>' +
-        '<button id="noticeCollapsed" class="notice-collapsed hidden" type="button" aria-label="お知らせを表示">お知らせ</button>' +
+        '<div id="noticeDock" class="notice-overlay hidden">' +
+          '<div id="noticePanel" class="notice-panel">' +
+            '<div class="notice-head"><strong id="noticeTitle">お知らせ</strong><button id="noticeClose" type="button" aria-label="閉じる">×</button></div>' +
+            '<div id="noticeText"></div>' +
+            '<div id="noticeUpdated"></div>' +
+          '</div>' +
+        '</div>' +
+        '<div id="noticeHistoryPanel" class="notice-history-panel hidden">' +
+          '<div class="notice-head"><strong>お知らせ履歴</strong><button id="noticeHistoryClose" type="button" aria-label="閉じる">×</button></div>' +
+          '<div id="noticeHistoryList"></div>' +
+        '</div>' +
+        '<button id="noticeCollapsed" class="notice-collapsed hidden" type="button" aria-label="お知らせ履歴を表示">お知らせ</button>' +
         '<button id="mapControlsButton" class="map-ui-btn" type="button">地図操作</button>' +
         '<div id="mapControlsPanel" aria-hidden="true">' +
           '<button id="fitRouteQuickButton" type="button">予定経路全体を表示</button>' +
@@ -78,8 +83,8 @@
         '<div id="schedulePanel" aria-hidden="true"></div>' +
       '</div>' +
       '<div id="status"></div>' +
-      '<div id="updateInfo"><strong>自動更新：約' + (POLL_INTERVAL_MS / 1000) + '秒ごと</strong>（位置情報・お知らせ） <button id="updateInfoBtn" class="inline-info" type="button" aria-label="更新について">ⓘ</button> <span class="version-badge">' + SYSTEM_VERSION + '</span></div>' +
       '<div id="note">※予定時刻は進行状況により前後する場合があります。休憩中などは位置情報の更新間隔が空くことがあります。GPSや通信状況により、実際の場所から多少ずれる場合があります。</div>' +
+      '<div id="updateInfo"><div class="update-main"><strong>自動更新：約' + (POLL_INTERVAL_MS / 1000) + '秒ごと</strong><button id="updateInfoBtn" class="inline-info" type="button" aria-label="更新について">ⓘ</button></div><div class="update-version">' + SYSTEM_VERSION + '</div></div>' +
       '<div id="publicInfoModal" class="modal hidden"><div class="modal-card"><div class="modal-head"><strong>自動更新について</strong><button id="publicInfoClose" type="button">×</button></div><div class="modal-body">このページを開いている間、位置情報とお知らせを自動的に更新します。スマートフォンへのプッシュ通知ではないため、ページを閉じている間に通知が届く機能ではありません。</div></div></div>';
   }
 
@@ -831,7 +836,7 @@
   }
 
   function showState(state) {
-    updateNotice_(state ? state.notice : null);
+    updateNotice_(state ? state.notice : null, state && Array.isArray(state.noticeHistory) ? state.noticeHistory : []);
 
     setSimulationBadge(
       !!(state && state.isSimulation) ||
@@ -982,24 +987,29 @@
 
   function wireNoticeUi_() {
     document.getElementById('noticeClose').addEventListener('click', () => {
-      if (!currentNoticeId) return;
+      if (currentNoticeId) {
+        try {
+          localStorage.setItem(
+            'mikoshiDismissedNoticeId',
+            currentNoticeId
+          );
+        } catch (e) {}
+      }
 
-      try {
-        localStorage.setItem(
-          'mikoshiDismissedNoticeId',
-          currentNoticeId
-        );
-      } catch (e) {}
-
-      document.getElementById('noticePanel').classList.add('hidden');
-      document.getElementById('noticeDock').classList.add('hidden');
-      document.getElementById('noticeCollapsed').classList.remove('hidden');
+      hideCurrentNotice_();
+      showNoticeButton_();
     });
 
     document.getElementById('noticeCollapsed').addEventListener('click', () => {
+      hideCurrentNotice_();
+      renderNoticeHistory_();
       document.getElementById('noticeCollapsed').classList.add('hidden');
-      document.getElementById('noticeDock').classList.remove('hidden');
-      document.getElementById('noticePanel').classList.remove('hidden');
+      document.getElementById('noticeHistoryPanel').classList.remove('hidden');
+    });
+
+    document.getElementById('noticeHistoryClose').addEventListener('click', () => {
+      document.getElementById('noticeHistoryPanel').classList.add('hidden');
+      showNoticeButton_();
     });
 
     document.getElementById('updateInfoBtn').addEventListener('click', () => {
@@ -1017,16 +1027,28 @@
     });
   }
 
-  function updateNotice_(notice) {
+  function updateNotice_(notice, history) {
     const dock = document.getElementById('noticeDock');
     const panel = document.getElementById('noticePanel');
-    const collapsed = document.getElementById('noticeCollapsed');
+    const historyPanel = document.getElementById('noticeHistoryPanel');
+
+    currentNoticeHistory = Array.isArray(history)
+      ? history.slice(0, 3)
+      : [];
+
+    renderNoticeHistory_();
+    updateNoticeButtonLabel_();
+
+    const historyOpen =
+      !historyPanel.classList.contains('hidden');
 
     if (!notice || !notice.id || !notice.text) {
-      currentNoticeId = null;
-      dock.classList.add('hidden');
-      panel.classList.add('hidden');
-      collapsed.classList.add('hidden');
+      hideCurrentNotice_();
+
+      if (!historyOpen) {
+        showNoticeButton_();
+      }
+
       return;
     }
 
@@ -1060,15 +1082,90 @@
     document.getElementById('noticeUpdated').textContent =
       '更新 ' + formatNoticeTime_(notice.updatedAt);
 
-    if (isNew || !wasDismissed) {
+    if (isNew) {
+      historyPanel.classList.add('hidden');
+      document.getElementById('noticeCollapsed').classList.add('hidden');
       dock.classList.remove('hidden');
       panel.classList.remove('hidden');
-      collapsed.classList.add('hidden');
-    } else {
-      dock.classList.add('hidden');
-      panel.classList.add('hidden');
-      collapsed.classList.remove('hidden');
+      return;
     }
+
+    if (historyOpen) {
+      dock.classList.add('hidden');
+      document.getElementById('noticeCollapsed').classList.add('hidden');
+      return;
+    }
+
+    if (!wasDismissed) {
+      dock.classList.remove('hidden');
+      panel.classList.remove('hidden');
+      document.getElementById('noticeCollapsed').classList.add('hidden');
+    } else {
+      hideCurrentNotice_();
+      showNoticeButton_();
+    }
+  }
+
+  function hideCurrentNotice_() {
+    document.getElementById('noticeDock').classList.add('hidden');
+    document.getElementById('noticePanel').classList.add('hidden');
+  }
+
+  function showNoticeButton_() {
+    const btn = document.getElementById('noticeCollapsed');
+
+    if (currentNoticeHistory.length) {
+      updateNoticeButtonLabel_();
+      btn.classList.remove('hidden');
+    } else {
+      btn.classList.add('hidden');
+    }
+  }
+
+  function updateNoticeButtonLabel_() {
+    const btn = document.getElementById('noticeCollapsed');
+    const count = currentNoticeHistory.length;
+
+    btn.textContent =
+      count > 0
+        ? 'お知らせ（' + count + '）'
+        : 'お知らせ';
+  }
+
+  function renderNoticeHistory_() {
+    const list = document.getElementById('noticeHistoryList');
+
+    if (!list) return;
+
+    if (!currentNoticeHistory.length) {
+      list.innerHTML =
+        '<div class="notice-history-empty">お知らせ履歴はありません。</div>';
+      return;
+    }
+
+    list.innerHTML = '';
+
+    currentNoticeHistory.forEach((item, index) => {
+      const row = document.createElement('div');
+      row.className =
+        'notice-history-item ' +
+        (item.level === 'important' ? 'important' : 'normal');
+
+      const head = document.createElement('div');
+      head.className = 'notice-history-meta';
+      head.textContent =
+        (index === 0 ? '最新　' : '') +
+        formatNoticeTime_(item.updatedAt) +
+        (item.level === 'important' ? '　重要' : '');
+
+      const text = document.createElement('div');
+      text.className = 'notice-history-text';
+      text.textContent = item.text;
+
+      row.appendChild(head);
+      row.appendChild(text);
+      list.appendChild(row);
+    });
   }
 
   function formatNoticeTime_(value) {

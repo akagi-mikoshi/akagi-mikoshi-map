@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '9';
+  const VERSION = '10';
   const SAMPLE_SPACING_M = 30;
 
   let token = sessionStorage.getItem('mikoshiAdminToken') || '';
@@ -53,7 +53,7 @@
     ) {
       document.body.innerHTML =
         '<div class="wrap"><div class="card">' +
-        '<div class="title-row"><h1>神輿位置 シミュレーション</h1><span class="version-badge">RC3-D2.1</span></div>' +
+        '<div class="title-row"><h1>神輿位置 シミュレーション</h1><span class="version-badge">RC3-D2.2</span></div>' +
         '<div class="message error">設定ファイルを読み込めませんでした。</div>' +
         '</div></div>';
       return;
@@ -84,7 +84,7 @@
     document.body.innerHTML = `
       <div class="wrap">
         <div class="card">
-          <div class="title-row"><h1>神輿位置 シミュレーション</h1><span class="version-badge">RC3-D2.1</span></div>
+          <div class="title-row"><h1>神輿位置 シミュレーション</h1><span class="version-badge">RC3-D2.2</span></div>
           <div class="warning">
             このツールは予定巡行路に沿ったダミーGPSを送信します。
             シミュレーション中は一般向け地図にもテスト位置が表示され、

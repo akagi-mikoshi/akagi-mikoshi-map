@@ -1,6 +1,6 @@
 (() => {
-  const VERSION = '2';
-  const SYSTEM_VERSION = 'RC3-D2.1';
+  const VERSION = '4';
+  const SYSTEM_VERSION = 'RC3-D2.2';
   const LEAFLET_CSS =
     'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
   const LEAFLET_JS =
@@ -78,7 +78,7 @@
             <span class="version-badge">${SYSTEM_VERSION}</span>
           </div>
           <div class="muted">
-            管理者向けの読み取り専用画面です。巡行状態や位置情報を変更する操作は行いません。
+            診断・確認用の画面です。神輿の巡行状態や一般向け地図の表示状態は変更しません。
           </div>
 
           <div id="loginBox">
@@ -121,6 +121,8 @@
             <div class="muted" style="margin-top:8px">
               Traccar Client側で「Location filtered」や「request no fix」となった位置情報は送信されないため、ここには現れません。
             </div>
+            <button id="clearLastIngestBtn" class="caution">診断用の最終受信情報を消去</button>
+            <div id="ingestActionMessage"></div>
           </div>
 
           <div class="card">
@@ -166,10 +168,10 @@
             <table class="kv">
               <tr><th>システムバージョン</th><td>${SYSTEM_VERSION}</td></tr>
               <tr><th>Backend</th><td id="backendVersion">—</td></tr>
-              <tr><th>公開地図</th><td>app v10</td></tr>
-              <tr><th>管理画面</th><td>admin v13</td></tr>
-              <tr><th>診断画面</th><td>debug v3</td></tr>
-              <tr><th>シミュレーション</th><td>simulator v9</td></tr>
+              <tr><th>公開地図</th><td>app v11</td></tr>
+              <tr><th>管理画面</th><td>admin v14</td></tr>
+              <tr><th>診断画面</th><td>debug v4</td></tr>
+              <tr><th>シミュレーション</th><td>simulator v10</td></tr>
               <tr><th>巡行ルート・予定データ</th><td><span id="routeDataInfo">—</span> <button class="inline-info" data-info="routeData">ⓘ</button></td></tr>
               <tr><th>サーバー時刻</th><td id="serverTime">—</td></tr>
               <tr><th>神輿位置の表示開始時刻</th><td id="publicSince">—</td></tr>
@@ -203,6 +205,7 @@
 
     document.getElementById('refreshBtn').onclick = refreshOnce;
     document.getElementById('copyBtn').onclick = copyDiagnosis;
+    document.getElementById('clearLastIngestBtn').onclick = clearLastIngest_;
     document.getElementById('receivedBtn').onclick = focusReceived;
     document.getElementById('currentBtn').onclick = focusCurrent;
     document.getElementById('routeBtn').onclick = fitRoute;
@@ -360,6 +363,47 @@
     const el = document.getElementById('loginMessage');
     el.className = 'message' + (error ? ' error' : '');
     el.textContent = text;
+  }
+
+  async function clearLastIngest_() {
+    if (!token) return;
+
+    if (!confirm(
+      '診断画面に表示される「Traccarから最後に受信した位置情報」だけを消去します。神輿現在位置・経路記録・一般向け地図には影響しません。よろしいですか？'
+    )) {
+      return;
+    }
+
+    const btn = document.getElementById('clearLastIngestBtn');
+    const msg = document.getElementById('ingestActionMessage');
+
+    btn.disabled = true;
+    msg.className = 'message';
+    msg.textContent = '診断用の最終受信情報を消去しています…';
+
+    try {
+      const r = await callAdmin('debugClearLastIngest');
+
+      if (!r.ok) {
+        if (r.error === 'session_expired') {
+          clearSession();
+          alert('管理セッションの有効期限が切れました。もう一度ログインしてください。');
+          location.reload();
+          return;
+        }
+
+        throw new Error('failed');
+      }
+
+      msg.className = 'message ok-message';
+      msg.textContent = '診断用の最終受信情報を消去しました。';
+      await refreshOnce();
+    } catch (e) {
+      msg.className = 'message error';
+      msg.textContent = '診断用の最終受信情報を消去できませんでした。';
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   async function refreshOnce() {
