@@ -1,12 +1,12 @@
 (() => {
-  const VERSION = '12';
+  const VERSION = '13';
   const LEAFLET_CSS = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
   const LEAFLET_JS  = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
   const MIKOSHI_IMAGE = './mikoshi_marker.png?v=' + VERSION;
   const TEST_MODE =
     new URLSearchParams(window.location.search).get('test') === '1';
   const POLL_INTERVAL_MS = TEST_MODE ? 2000 : 15000;
-  const SYSTEM_VERSION = 'RC3-D2.3';
+  const SYSTEM_VERSION = 'RC3-D2.4';
   let currentNoticeId = null;
   let currentNoticeHistory = [];
 
@@ -1043,6 +1043,7 @@
       !historyPanel.classList.contains('hidden');
 
     if (!notice || !notice.id || !notice.text) {
+      currentNoticeId = null;
       hideCurrentNotice_();
 
       if (!historyOpen) {
@@ -1125,11 +1126,21 @@
   function updateNoticeButtonLabel_() {
     const btn = document.getElementById('noticeCollapsed');
     const count = currentNoticeHistory.length;
+    const hasCurrentNotice =
+      !!(
+        currentNoticeId &&
+        document.getElementById('noticeText').textContent
+      );
+
+    if (count <= 0) {
+      btn.textContent = 'お知らせ';
+      return;
+    }
 
     btn.textContent =
-      count > 0
+      hasCurrentNotice
         ? 'お知らせ（' + count + '）'
-        : 'お知らせ';
+        : 'お知らせ履歴（' + count + '）';
   }
 
   function renderNoticeHistory_() {

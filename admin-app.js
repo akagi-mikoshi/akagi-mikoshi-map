@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '15';
+  const VERSION = '16';
   let token = sessionStorage.getItem('mikoshiAdminToken') || '';
   let busy = false;
   let currentPublicState = false;
@@ -53,7 +53,7 @@
     document.body.innerHTML = `
       <div class="wrap">
         <div class="card">
-          <div class="title-row"><h1>赤城神社 神輿位置 管理</h1><span class="version-badge">RC3-D2.3</span></div>
+          <div class="title-row"><h1>赤城神社 神輿位置 管理</h1><span class="version-badge">RC3-D2.4</span></div>
           <div id="loginBox">
             <label for="password">管理用パスワード</label>
             <input id="password" type="password" autocomplete="current-password">
@@ -90,7 +90,9 @@
           </div>
 
           <div class="card">
-            <h2>一般向け地図へのお知らせ</h2>
+            <h2>一般向け地図へのお知らせ
+              <button id="noticeInfoBtn" class="inline-info" type="button" aria-label="お知らせ機能の説明">ⓘ</button>
+            </h2>
             <div class="muted" style="margin-bottom:10px">
               地図を開いている利用者へ、通常は約15秒以内に反映されます。スマートフォンへのプッシュ通知ではありません。
             </div>
@@ -102,7 +104,7 @@
             </div>
             <div class="stack">
               <button id="noticeSetBtn" class="primary">お知らせを表示・更新</button>
-              <button id="noticeClearBtn" class="outline">お知らせの表示を終了</button>
+              <button id="noticeClearBtn" class="outline">お知らせの表示を終了（履歴も消去）</button>
             </div>
             <div id="currentNotice" class="current-notice">現在表示中のお知らせ：なし</div>
           </div>
@@ -205,6 +207,13 @@
 
     document.getElementById('noticeSetBtn').onclick = setNotice_;
     document.getElementById('noticeClearBtn').onclick = clearNotice_;
+
+    document.getElementById('noticeInfoBtn').onclick = () => {
+      openInfo_(
+        '一般向け地図へのお知らせ',
+        '「お知らせを表示・更新」で一般向け地図へ新しいお知らせを出します。利用者は直近3件を履歴から確認できます。\n\n「お知らせの表示を終了（履歴も消去）」を押すと、現在のお知らせと直近3件の履歴を一般向け地図から消去し、地図上の「お知らせ」「お知らせ履歴」ボタンも消えます。'
+      );
+    };
 
     document.getElementById('gpsRuleInfoBtn').onclick = () => {
       openInfo_(
@@ -620,12 +629,12 @@
   async function clearNotice_() {
     if (busy || !token) return;
 
-    if (!confirm('一般向け地図のお知らせ表示を終了します。よろしいですか？')) {
+    if (!confirm('一般向け地図から現在のお知らせと直近3件の履歴を消去します。よろしいですか？')) {
       return;
     }
 
     setBusy(true);
-    mainMessage('お知らせを終了しています…');
+    mainMessage('一般向け地図のお知らせと履歴を消去しています…');
 
     try {
       const r = await callAdmin('noticeClear');
@@ -637,9 +646,9 @@
 
       noticeEditorDirty = false;
       updateState(r.state);
-      mainMessage('お知らせの表示を終了しました。', false, true);
+      mainMessage('一般向け地図のお知らせと履歴を消去しました。', false, true);
     } catch (e) {
-      mainMessage('お知らせを終了できませんでした。', true);
+      mainMessage('お知らせと履歴を消去できませんでした。', true);
     } finally {
       setBusy(false);
     }

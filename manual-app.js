@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '4';
+  const VERSION = '5';
 
   function loadCss(url) {
     return new Promise((resolve, reject) => {
@@ -20,7 +20,7 @@
         <div class="card">
           <div class="title-row">
             <h1>当日操作マニュアル</h1>
-            <span class="version-badge">RC3-D2.3</span>
+            <span class="version-badge">RC3-D2.4</span>
           </div>
           <p>赤城神社例大祭　神輿現在地案内システム</p>
           <div class="notice">
@@ -67,8 +67,8 @@
             <li>お知らせ本文は地図上に重ねて表示されるため、表示・非表示で地図の高さは変わりません。</li>
             <li>利用者は読んだ後に閉じることができ、「お知らせ」をタッチすると最新3件の履歴を再確認できます。</li>
             <li>内容を更新すると、新しいお知らせとして自動的に再表示されます。</li>
-            <li>「お知らせの表示を終了」後も、その巡行中の直近3件は履歴から確認できます。</li>
-            <li>巡行終了または全リセット時には、お知らせ履歴も消去されます。</li>
+            <li>利用者は、お知らせ表示中は「お知らせ」から直近3件の履歴を再確認できます。</li>
+            <li>管理画面で「お知らせの表示を終了（履歴も消去）」を押すと、現在のお知らせと直近3件の履歴が一般向け地図から消えます。巡行終了または全リセット時にも消去されます。</li>
           </ul>
         </div>
 
@@ -122,7 +122,7 @@
           </div>
         </div>
 
-        <div class="footer">RC3-D2.3　オンラインマニュアル</div>
+        <div class="footer">RC3-D2.4　オンラインマニュアル</div>
       </div>
     `;
   }
