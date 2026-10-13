@@ -4,8 +4,10 @@ html,body{margin:0;padding:0;background:#f5f3f1;color:#242424;font-family:Meiryo
 body{padding:12px}
 .wrap{max-width:920px;margin:0 auto}
 .card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.title-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
 h1{font-size:22px;margin:0 0 10px}
 h2{font-size:17px;margin:0 0 10px}
+.version-badge{display:inline-block;white-space:nowrap;border-radius:999px;background:#e8eef4;color:#3d5870;padding:4px 8px;font-size:11px;font-weight:bold}
 label{display:block;font-size:13px;font-weight:bold;margin-bottom:6px}
 input{width:100%;font-size:18px;padding:12px;border:1px solid #aaa;border-radius:8px}
 button{width:100%;min-height:44px;margin-top:10px;border:0;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer}
@@ -19,17 +21,22 @@ button{width:100%;min-height:44px;margin-top:10px;border:0;border-radius:8px;fon
 .tile .label{font-size:12px;color:#666;margin-bottom:4px}
 .tile .value{font-size:16px;font-weight:bold;line-height:1.45;overflow-wrap:anywhere}
 .ok{color:#256b36}.warn{color:#8a5c00}.bad{color:#a12222}.neutral{color:#444}
-.diagnosis{border-left:5px solid #777;background:#f7f7f7;padding:11px 12px;border-radius:8px;line-height:1.65;font-size:14px}
-.diagnosis.ok{border-left-color:#2f7d46;background:#eef8f0;color:#214d2d}
-.diagnosis.warn{border-left-color:#c18a18;background:#fff7df;color:#634a0b}
-.diagnosis.bad{border-left-color:#b3261e;background:#fff0ef;color:#6e211c}
+.diagnosis-grid{display:grid;gap:8px}
+.diagnosis-row{display:grid;grid-template-columns:160px 1fr;gap:10px;align-items:center;padding:9px 10px;border:1px solid #ddd;border-radius:8px;background:#fafafa;font-size:14px}
+.diagnosis-row span{color:#555}
 .kv{width:100%;border-collapse:collapse;font-size:13px}
 .kv th,.kv td{padding:7px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:left}
 .kv th{width:34%;color:#555;font-weight:normal}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-wrap:anywhere}
-#map{height:330px;border-radius:10px;border:1px solid #bbb;background:#eee}
-.mapButtons{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#map{height:350px;border-radius:10px;border:1px solid #bbb;background:#eee}
+.mapButtons{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .mapButtons button{margin-top:8px}
+.debug-legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;font-size:12px;color:#555}
+.debug-legend span{display:flex;align-items:center;gap:5px}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid}
+.dot.received{border-color:#356F9F}
+.dot.current{border-color:#8A2D24}
+.dot.same{border-color:#65438d}
 .history{width:100%;border-collapse:collapse;font-size:12px}
 .history th,.history td{border-bottom:1px solid #eee;padding:6px 4px;text-align:left;white-space:nowrap}
 .history td.coords{white-space:normal}
@@ -37,9 +44,16 @@ button{width:100%;min-height:44px;margin-top:10px;border:0;border-radius:8px;fon
 .toolbar button{margin-top:0}
 .muted{font-size:12px;color:#666;line-height:1.6}
 .footer{text-align:center;color:#777;font-size:11px;padding:4px 0 12px}
+.inline-info{display:inline-flex;width:26px;height:26px;min-height:26px;margin:0 0 0 3px;padding:0;align-items:center;justify-content:center;border-radius:50%;background:#eee;color:#444;border:1px solid #bbb;font-size:13px;vertical-align:middle}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-card{width:min(560px,100%);max-height:82vh;overflow:auto;background:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.modal-head{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#fff;border-bottom:1px solid #ddd}
+.modal-head button{width:38px;min-height:38px;margin:0;border-radius:50%;background:#eee;color:#333}
+.modal-body{padding:14px;line-height:1.8;font-size:14px;white-space:pre-wrap}
 @media(max-width:600px){
   .summary{grid-template-columns:1fr}
   .toolbar,.mapButtons{grid-template-columns:1fr}
-  #map{height:290px}
+  #map{height:300px}
   .history{font-size:11px}
+  .diagnosis-row{grid-template-columns:1fr;gap:3px}
 }

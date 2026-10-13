@@ -46,3 +46,19 @@ button:disabled{opacity:.5;cursor:default}
 .operation-state.running{background:#e8f5eb;color:#215d31;border:1px solid #9bc4a6}
 .operation-state.simulation{background:#fff3cd;color:#644b00;border:1px solid #e0c260}
 #startBtn:disabled,#endBtn:disabled,#clearBtn:disabled{opacity:.42;filter:grayscale(.15)}
+
+.title-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.version-badge{display:inline-block;white-space:nowrap;border-radius:999px;background:#eee;color:#555;padding:4px 8px;font-size:11px;font-weight:bold}
+.gps-rule{margin:10px 0 12px;padding:9px 10px;border:1px solid #d7c8a7;background:#fffaf0;border-radius:8px;font-size:13px;line-height:1.55;color:#55441e}
+.inline-info{display:inline-flex!important;width:28px!important;min-height:28px!important;height:28px!important;margin:0 0 0 4px!important;padding:0!important;align-items:center;justify-content:center;border-radius:50%!important;background:#eee!important;color:#444!important;border:1px solid #bbb!important;font-size:14px!important;vertical-align:middle}
+textarea{width:100%;resize:vertical;font:inherit;font-size:16px;line-height:1.55;padding:10px;border:1px solid #aaa;border-radius:8px}
+.notice-editor-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:8px 0 10px;font-size:13px}
+.notice-editor-row label{display:flex;align-items:center;gap:4px;margin:0}
+.notice-editor-row #noticeCount{margin-left:auto;color:#666}
+.current-notice{margin-top:10px;padding:9px 10px;border-radius:8px;background:#f6f6f6;border:1px solid #ddd;font-size:13px;line-height:1.6}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal.hidden{display:none}
+.modal-card{width:min(520px,100%);max-height:80vh;overflow:auto;background:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.modal-head{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#fff;border-bottom:1px solid #ddd}
+.modal-head button{width:38px!important;min-height:38px!important;margin:0!important;border-radius:50%!important;background:#eee!important;color:#333!important}
+.modal-body{padding:14px;line-height:1.8;font-size:14px;white-space:pre-wrap}

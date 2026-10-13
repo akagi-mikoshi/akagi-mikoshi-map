@@ -1,5 +1,6 @@
 (() => {
-  const VERSION = '1';
+  const VERSION = '2';
+  const SYSTEM_VERSION = 'RC3-D2';
   const LEAFLET_CSS =
     'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
   const LEAFLET_JS =
@@ -11,9 +12,9 @@
   let timer = null;
   let map = null;
   let routeGroup = null;
-  let latestMarker = null;
-  let nearestMarker = null;
-  let connector = null;
+  let receivedMarker = null;
+  let currentMarker = null;
+  let differenceLine = null;
   let historyLayer = null;
   let lastDebug = null;
   let lastLatency = null;
@@ -61,6 +62,7 @@
           return;
         }
       } catch (e) {}
+
       clearSession();
     }
 
@@ -71,9 +73,12 @@
     document.body.innerHTML = `
       <div class="wrap">
         <div class="card">
-          <h1>赤城神社 神輿位置 診断</h1>
+          <div class="title-row">
+            <h1>赤城神社 神輿位置 診断</h1>
+            <span class="version-badge">${SYSTEM_VERSION}</span>
+          </div>
           <div class="muted">
-            管理者向けの読み取り専用画面です。ここから巡行状態や位置情報を変更する操作は行いません。
+            管理者向けの読み取り専用画面です。巡行状態や位置情報を変更する操作は行いません。
           </div>
 
           <div id="loginBox">
@@ -86,8 +91,11 @@
 
         <div id="debugBox" class="hidden">
           <div class="card">
-            <h2>現在の診断</h2>
-            <div id="diagnosis" class="diagnosis neutral">確認中です…</div>
+            <h2>現在の診断 <button class="inline-info" data-info="diagnosis">ⓘ</button></h2>
+            <div class="diagnosis-grid">
+              <div class="diagnosis-row"><span>Traccar受信</span><strong id="diagReceive">—</strong></div>
+              <div class="diagnosis-row"><span>神輿現在位置への反映</span><strong id="diagReflect">—</strong></div>
+            </div>
           </div>
 
           <div class="card">
@@ -95,55 +103,59 @@
             <div class="summary">
               <div class="tile"><div class="label">サーバー通信</div><div id="apiStatus" class="value">—</div></div>
               <div class="tile"><div class="label">巡行状態</div><div id="sessionStatus" class="value">—</div></div>
-              <div class="tile"><div class="label">神輿位置の公開</div><div id="publicStatus" class="value">—</div></div>
-              <div class="tile"><div class="label">最後のTraccar到達</div><div id="ingestStatus" class="value">—</div></div>
+              <div class="tile"><div class="label">一般向け地図の神輿位置</div><div id="publicStatus" class="value">—</div></div>
+              <div class="tile"><div class="label">Traccar最終受信</div><div id="ingestStatus" class="value">—</div></div>
             </div>
           </div>
 
           <div class="card">
-            <h2>Traccar → GAS</h2>
+            <h2>Traccarから最後に受信した位置情報 <button class="inline-info" data-info="ingest">ⓘ</button></h2>
             <table class="kv">
-              <tr><th>最終到達時刻</th><td id="ingestTime">—</td></tr>
-              <tr><th>処理結果</th><td id="ingestResult">—</td></tr>
-              <tr><th>受信した位置</th><td id="ingestCoords" class="mono">—</td></tr>
-              <tr><th>精度</th><td id="ingestAccuracy">—</td></tr>
-              <tr><th>送信方式</th><td id="ingestTransport">—</td></tr>
+              <tr><th>デバイス識別子</th><td id="deviceIdentifier" class="mono">—</td></tr>
+              <tr><th>最終受信</th><td id="ingestTime">—</td></tr>
+              <tr><th>処理</th><td id="ingestResult">—</td></tr>
+              <tr><th>緯度・経度</th><td id="ingestCoords" class="mono">—</td></tr>
+              <tr><th>位置精度</th><td id="ingestAccuracy">—</td></tr>
+              <tr><th>通信方式</th><td id="ingestTransport">—</td></tr>
             </table>
             <div class="muted" style="margin-top:8px">
-              Traccar Client 側で「Location filtered」や「request no fix」になった位置は、サーバーへ送信されていないため、この欄には現れません。
+              Traccar Client側で「Location filtered」や「request no fix」となった位置情報は送信されないため、ここには現れません。
             </div>
           </div>
 
           <div class="card">
-            <h2>サーバーに保存中の位置</h2>
+            <h2>現在の神輿位置（システム上） <button class="inline-info" data-info="current">ⓘ</button></h2>
             <table class="kv">
               <tr><th>位置の種類</th><td id="latestSource">—</td></tr>
-              <tr><th>最終受信</th><td id="latestTime">—</td></tr>
+              <tr><th>最終更新</th><td id="latestTime">—</td></tr>
               <tr><th>緯度・経度</th><td id="latestCoords" class="mono">—</td></tr>
               <tr><th>位置精度</th><td id="latestAccuracy">—</td></tr>
-              <tr><th>通過履歴点数</th><td id="trailCount">—</td></tr>
-              <tr><th>公開地図へ渡す位置</th><td id="publicLatest">—</td></tr>
+              <tr><th>経路記録</th><td><span id="trailCount">—</span> <button class="inline-info" data-info="trail">ⓘ</button></td></tr>
+              <tr><th>一般向け地図</th><td id="publicLatest">—</td></tr>
             </table>
           </div>
 
           <div class="card">
-            <h2>位置の確認地図</h2>
+            <h2>受信位置と神輿現在位置の確認地図</h2>
+            <div class="debug-legend">
+              <span><i class="dot received"></i>Traccarから最後に受信</span>
+              <span><i class="dot current"></i>神輿現在位置</span>
+              <span><i class="dot same"></i>両者が一致</span>
+            </div>
             <div id="map"></div>
             <div class="mapButtons">
-              <button id="latestBtn" class="secondary">保存中の位置へ</button>
+              <button id="receivedBtn" class="secondary">Traccar受信位置へ</button>
+              <button id="currentBtn" class="secondary">神輿現在位置へ</button>
               <button id="routeBtn" class="secondary">巡行ルート全体へ</button>
             </div>
-            <div id="routeDistance" class="message">予定経路との距離を計算しています…</div>
-            <div class="muted">
-              青い点＝サーバーに保存中の位置、赤い点＝予定経路上の最寄り位置（参考）、細線＝その距離です。予定経路から大きく離れている場合は、最寄り位置は参考表示です。
-            </div>
+            <div id="mapInfo" class="message">位置情報を確認しています…</div>
           </div>
 
           <div class="card">
-            <h2>最近保存したGPS位置（最大10件）</h2>
+            <h2>最近、神輿現在位置に反映した位置情報（最大10件）</h2>
             <div style="overflow:auto">
               <table class="history">
-                <thead><tr><th>時刻</th><th>精度</th><th>緯度・経度</th></tr></thead>
+                <thead><tr><th>時刻</th><th>デバイス識別子</th><th>精度</th><th>緯度・経度</th></tr></thead>
                 <tbody id="historyBody"></tbody>
               </table>
             </div>
@@ -152,12 +164,15 @@
           <div class="card">
             <h2>システム情報</h2>
             <table class="kv">
+              <tr><th>システムバージョン</th><td>${SYSTEM_VERSION}</td></tr>
               <tr><th>Backend</th><td id="backendVersion">—</td></tr>
-              <tr><th>公開地図</th><td>RC3改訂版 / app v8</td></tr>
-              <tr><th>管理画面</th><td>admin v11</td></tr>
-              <tr><th>シミュレーション</th><td>simulator v7</td></tr>
+              <tr><th>公開地図</th><td>app v9</td></tr>
+              <tr><th>管理画面</th><td>admin v12</td></tr>
+              <tr><th>診断画面</th><td>debug v2</td></tr>
+              <tr><th>シミュレーション</th><td>simulator v8</td></tr>
+              <tr><th>巡行ルート・予定データ</th><td><span id="routeDataInfo">—</span> <button class="inline-info" data-info="routeData">ⓘ</button></td></tr>
               <tr><th>サーバー時刻</th><td id="serverTime">—</td></tr>
-              <tr><th>表示開始時刻</th><td id="publicSince">—</td></tr>
+              <tr><th>神輿位置の表示開始時刻</th><td id="publicSince">—</td></tr>
             </table>
           </div>
 
@@ -171,6 +186,13 @@
         </div>
 
         <div class="footer">診断画面は一般向けQRコードには使用しません。</div>
+      </div>
+
+      <div id="infoModal" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-card">
+          <div class="modal-head"><strong id="infoTitle">説明</strong><button id="infoClose">×</button></div>
+          <div id="infoBody" class="modal-body"></div>
+        </div>
       </div>`;
 
     document.getElementById('loginBtn').onclick = login;
@@ -179,49 +201,105 @@
         if (e.key === 'Enter') login();
       };
 
-    document.getElementById('refreshBtn').onclick =
-      refreshOnce;
+    document.getElementById('refreshBtn').onclick = refreshOnce;
+    document.getElementById('copyBtn').onclick = copyDiagnosis;
+    document.getElementById('receivedBtn').onclick = focusReceived;
+    document.getElementById('currentBtn').onclick = focusCurrent;
+    document.getElementById('routeBtn').onclick = fitRoute;
+    document.getElementById('infoClose').onclick = closeInfo;
 
-    document.getElementById('copyBtn').onclick =
-      copyDiagnosis;
+    document.querySelectorAll('[data-info]').forEach(btn => {
+      btn.addEventListener('click', () => openInfo(btn.dataset.info));
+    });
 
-    document.getElementById('latestBtn').onclick =
-      focusLatest;
+    document.getElementById('infoModal').addEventListener('click', e => {
+      if (e.target.id === 'infoModal') closeInfo();
+    });
+  }
 
-    document.getElementById('routeBtn').onclick =
-      fitRoute;
+  function openInfo(kind) {
+    const info = {
+      diagnosis: [
+        '現在の診断',
+        '「Traccar受信」は位置情報がサーバーまで届いているか、「神輿現在位置への反映」は、その位置情報が現在の神輿位置として使われているかを示します。'
+      ],
+      ingest: [
+        'Traccarから最後に受信した位置情報',
+        '巡行開始前・終了後でも、Traccar Clientから位置情報がサーバーまで届けばここで確認できます。'
+      ],
+      current: [
+        '現在の神輿位置（システム上）',
+        'システムが現在の神輿位置として持っている最新1件です。位置履歴の一覧ではありません。巡行中は、正常に受信したTraccarの位置情報がここへ反映されます。'
+      ],
+      trail: [
+        '経路記録',
+        '巡行中に受信した位置情報のうち、前回の経路記録点から約12m以上移動した地点を記録します。GPSの受信回数そのものではありません。最大1200点です。公開地図の赤茶色の線は、この記録を予定巡行路に照らして表示します。'
+      ],
+      routeData: [
+        '巡行ルート・予定データの変更履歴',
+        routeHistoryText_()
+      ]
+    }[kind];
+
+    if (!info) return;
+
+    document.getElementById('infoTitle').textContent = info[0];
+    document.getElementById('infoBody').textContent = info[1];
+    document.getElementById('infoModal').classList.remove('hidden');
+  }
+
+  function closeInfo() {
+    document.getElementById('infoModal').classList.add('hidden');
+  }
+
+  function routeHistoryText_() {
+    const meta =
+      window.MIKOSHI_ROUTE_DATA &&
+      window.MIKOSHI_ROUTE_DATA.metadata;
+
+    if (!meta) return '変更履歴は登録されていません。';
+
+    const lines = [
+      'データ版：' + (meta.dataVersion || '—'),
+      '最終更新：' + (meta.updatedAt || '—'),
+      ''
+    ];
+
+    (meta.changes || []).forEach(change => {
+      lines.push(change.date || '');
+      (change.items || []).forEach(item => {
+        lines.push('・' + item);
+      });
+      lines.push('');
+    });
+
+    if (Array.isArray(meta.sourceNotes) && meta.sourceNotes.length) {
+      lines.push('出典メモ');
+      meta.sourceNotes.forEach(item => lines.push('・' + item));
+    }
+
+    return lines.join('\n').trim();
   }
 
   function showLogin() {
-    document.getElementById('loginBox')
-      .classList.remove('hidden');
-    document.getElementById('debugBox')
-      .classList.add('hidden');
+    document.getElementById('loginBox').classList.remove('hidden');
+    document.getElementById('debugBox').classList.add('hidden');
   }
 
   function showDebug() {
-    document.getElementById('loginBox')
-      .classList.add('hidden');
-    document.getElementById('debugBox')
-      .classList.remove('hidden');
+    document.getElementById('loginBox').classList.add('hidden');
+    document.getElementById('debugBox').classList.remove('hidden');
 
-    if (!map) {
-      initMap();
-    }
+    if (!map) initMap();
   }
 
   async function login() {
-    const box =
-      document.getElementById('password');
-    const btn =
-      document.getElementById('loginBtn');
+    const box = document.getElementById('password');
+    const btn = document.getElementById('loginBtn');
     const password = box.value;
 
     if (!password) {
-      setLoginMessage(
-        'パスワードを入力してください。',
-        true
-      );
+      setLoginMessage('パスワードを入力してください。', true);
       box.focus();
       return;
     }
@@ -229,23 +307,16 @@
     btn.disabled = true;
     btn.textContent = '確認しています…';
     box.disabled = true;
-    setLoginMessage(
-      'パスワードを確認しています…',
-      false
-    );
+    setLoginMessage('パスワードを確認しています…', false);
 
     try {
-      const c = await jsonp({
-        mode: 'adminChallenge'
-      });
+      const c = await jsonp({ mode: 'adminChallenge' });
 
       if (!c.ok || !c.nonce) {
         throw new Error('challenge');
       }
 
-      const proof = await sha256Hex(
-        c.nonce + ':' + password
-      );
+      const proof = await sha256Hex(c.nonce + ':' + password);
 
       const r = await jsonp({
         mode: 'adminLogin',
@@ -262,10 +333,7 @@
       }
 
       token = r.token;
-      sessionStorage.setItem(
-        'mikoshiAdminToken',
-        token
-      );
+      sessionStorage.setItem('mikoshiAdminToken', token);
 
       box.value = '';
       showDebug();
@@ -289,12 +357,8 @@
   }
 
   function setLoginMessage(text, error) {
-    const el =
-      document.getElementById('loginMessage');
-
-    el.className =
-      'message' + (error ? ' error' : '');
-
+    const el = document.getElementById('loginMessage');
+    el.className = 'message' + (error ? ' error' : '');
     el.textContent = text;
   }
 
@@ -304,50 +368,32 @@
     const started = performance.now();
 
     try {
-      const r = await callAdmin(
-        'debugStatus'
-      );
+      const r = await callAdmin('debugStatus');
 
-      lastLatency =
-        Math.round(
-          performance.now() - started
-        );
+      lastLatency = Math.round(performance.now() - started);
 
       if (!r.ok) {
         if (r.error === 'session_expired') {
           clearSession();
-          alert(
-            '管理セッションの有効期限が切れました。もう一度ログインしてください。'
-          );
+          alert('管理セッションの有効期限が切れました。もう一度ログインしてください。');
           location.reload();
           return;
         }
-
         throw new Error('failed');
       }
 
       lastDebug = r.debug;
       applyDebug(lastDebug);
     } catch (e) {
-      document.getElementById('apiStatus')
-        .textContent = '取得失敗';
-
-      document.getElementById('apiStatus')
-        .className = 'value bad';
-
-      setDiagnosis(
-        'サーバーから診断情報を取得できませんでした。通信状態を確認してください。',
-        'bad'
-      );
+      setValue('apiStatus', '取得失敗', 'bad');
+      setText('diagReceive', '確認できません', 'bad');
+      setText('diagReflect', '確認できません', 'bad');
     }
   }
 
   function startPolling() {
     stopPolling();
-    timer = setInterval(
-      refreshOnce,
-      5000
-    );
+    timer = setInterval(refreshOnce, 5000);
   }
 
   function stopPolling() {
@@ -365,365 +411,198 @@
     const latest = a.latest;
     const pub = d.publicState || {};
 
-    setText(
+    setValue(
       'apiStatus',
-      '正常 ' +
-      (
-        lastLatency !== null
-          ? '（' + lastLatency + 'ms）'
-          : ''
-      ),
+      '正常' + (lastLatency !== null ? '（' + lastLatency + 'ms）' : ''),
       'ok'
     );
 
-    let sessionText =
-      '停止中';
+    let sessionText = '停止中';
+    let sessionClass = 'neutral';
 
-    let sessionClass =
-      'neutral';
-
-    if (
-      a.isSessionActive &&
-      a.sessionMode === 'real'
-    ) {
-      sessionText =
-        '巡行中（本番GPS）';
+    if (a.isSessionActive && a.sessionMode === 'real') {
+      sessionText = '巡行中（本番GPS）';
       sessionClass = 'ok';
-    } else if (
-      a.isSessionActive &&
-      a.sessionMode === 'simulation'
-    ) {
-      sessionText =
-        'シミュレーション中';
+    } else if (a.isSessionActive && a.sessionMode === 'simulation') {
+      sessionText = 'シミュレーション中';
       sessionClass = 'warn';
     }
 
-    setText(
-      'sessionStatus',
-      sessionText,
-      sessionClass
-    );
-
-    setText(
+    setValue('sessionStatus', sessionText, sessionClass);
+    setValue(
       'publicStatus',
-      a.isPublic
-        ? '表示中'
-        : '非表示',
+      a.isPublic ? '表示中' : '非表示',
       a.isPublic ? 'ok' : 'neutral'
     );
 
-    const ingestAge =
+    setValue(
+      'ingestStatus',
       ingest && ingest.receivedAt
         ? ageText(ingest.receivedAt)
-        : 'まだ受信なし';
-
-    setText(
-      'ingestStatus',
-      ingestAge,
-      ingest &&
-      ingest.result === 'saved'
+        : 'まだ受信なし',
+      ingest && ingest.result === 'saved'
         ? 'ok'
-        : (
-            ingest
-              ? 'warn'
-              : 'neutral'
-          )
+        : (ingest ? 'warn' : 'neutral')
     );
 
-    document.getElementById('ingestTime')
-      .textContent =
-      ingest
-        ? jpTime(ingest.receivedAt) +
-          '（' +
-          ageText(ingest.receivedAt) +
-          '）'
-        : 'まだTraccarから到達していません';
-
-    document.getElementById('ingestResult')
-      .textContent =
-      ingest
-        ? ingestResultLabel(ingest.result)
+    document.getElementById('deviceIdentifier').textContent =
+      ingest && ingest.deviceIdentifier
+        ? ingest.deviceIdentifier
         : '—';
 
-    document.getElementById('ingestCoords')
-      .textContent =
-      ingest &&
-      isFiniteNumber(ingest.lat) &&
-      isFiniteNumber(ingest.lon)
+    document.getElementById('ingestTime').textContent =
+      ingest
+        ? jpTime(ingest.receivedAt) + '（' + ageText(ingest.receivedAt) + '）'
+        : 'まだTraccarから受信していません';
+
+    document.getElementById('ingestResult').textContent =
+      ingest ? ingestResultLabel(ingest.result) : '—';
+
+    document.getElementById('ingestCoords').textContent =
+      ingest && isFiniteNumber(ingest.lat) && isFiniteNumber(ingest.lon)
         ? fmtCoord(ingest.lat, ingest.lon)
         : '—';
 
-    document.getElementById('ingestAccuracy')
-      .textContent =
-      ingest &&
-      isFiniteNumber(ingest.accuracy)
-        ? '約' +
-          Math.round(ingest.accuracy) +
-          'm'
+    document.getElementById('ingestAccuracy').textContent =
+      ingest && isFiniteNumber(ingest.accuracy)
+        ? '約' + Math.round(ingest.accuracy) + 'm'
         : '—';
 
-    document.getElementById('ingestTransport')
-      .textContent =
-      ingest
-        ? String(
-            ingest.transport || '—'
-          )
-        : '—';
+    document.getElementById('ingestTransport').textContent =
+      ingest ? String(ingest.transport || '—') : '—';
 
-    document.getElementById('latestSource')
-      .textContent =
-      latest
-        ? sourceLabel(latest.source)
-        : 'なし';
+    document.getElementById('latestSource').textContent =
+      latest ? sourceLabel(latest.source) : 'なし';
 
-    document.getElementById('latestTime')
-      .textContent =
+    document.getElementById('latestTime').textContent =
       latest && latest.receivedAt
-        ? jpTime(latest.receivedAt) +
-          '（' +
-          ageText(latest.receivedAt) +
-          '）'
+        ? jpTime(latest.receivedAt) + '（' + ageText(latest.receivedAt) + '）'
         : '—';
 
-    document.getElementById('latestCoords')
-      .textContent =
-      latest
-        ? fmtCoord(
-            latest.lat,
-            latest.lon
-          )
+    document.getElementById('latestCoords').textContent =
+      latest ? fmtCoord(latest.lat, latest.lon) : '—';
+
+    document.getElementById('latestAccuracy').textContent =
+      latest && isFiniteNumber(latest.accuracy)
+        ? '約' + Math.round(latest.accuracy) + 'm'
         : '—';
 
-    document.getElementById('latestAccuracy')
-      .textContent =
-      latest &&
-      isFiniteNumber(latest.accuracy)
-        ? '約' +
-          Math.round(latest.accuracy) +
-          'm'
-        : '—';
+    document.getElementById('trailCount').textContent =
+      String(a.trailCount || 0) + '点';
 
-    document.getElementById('trailCount')
-      .textContent =
-      String(a.trailCount || 0) +
-      '点';
-
-    document.getElementById('publicLatest')
-      .textContent =
+    document.getElementById('publicLatest').textContent =
       pub.latest
-        ? sourceLabel(pub.latest.source) +
-          ' / ' +
-          fmtCoord(
-            pub.latest.lat,
-            pub.latest.lon
-          )
-        : (
-            a.isPublic
-              ? '位置情報を待っています'
-              : '非表示'
-          );
+        ? '表示中：' + sourceLabel(pub.latest.source)
+        : (a.isPublic ? '位置情報を待っています' : '非表示');
 
-    document.getElementById('backendVersion')
-      .textContent =
+    document.getElementById('backendVersion').textContent =
       d.backendVersion || '—';
 
-    document.getElementById('serverTime')
-      .textContent =
+    document.getElementById('serverTime').textContent =
       jpTime(d.serverTime);
 
-    document.getElementById('publicSince')
-      .textContent =
-      a.publicSince
-        ? jpTime(a.publicSince)
+    document.getElementById('publicSince').textContent =
+      a.publicSince ? jpTime(a.publicSince) : '—';
+
+    const meta =
+      window.MIKOSHI_ROUTE_DATA &&
+      window.MIKOSHI_ROUTE_DATA.metadata;
+
+    document.getElementById('routeDataInfo').textContent =
+      meta
+        ? (meta.dataVersion || '—') + '（' + (meta.updatedAt || '—') + '更新）'
         : '—';
 
-    updateHistory(
-      d.recentHistory || []
-    );
-
-    updateMap(
-      latest,
-      d.recentHistory || []
-    );
-
-    evaluateDiagnosis(d);
+    updateDiagnosis_(d);
+    updateHistory(d.recentHistory || []);
+    updateMap(ingest, latest, d.recentHistory || []);
   }
 
-  function evaluateDiagnosis(d) {
+  function updateDiagnosis_(d) {
     const a = d.admin;
     const ingest = d.lastIngest;
-    const latest = a.latest;
-
-    if (
-      a.sessionMode === 'simulation'
-    ) {
-      setDiagnosis(
-        '現在はシミュレーション中です。実機Traccarから位置が届いても保存せず無視します。本番GPSの確認をする場合は、先にシミュレーションを終了・初期化してください。',
-        'warn'
-      );
-      return;
-    }
-
-    if (!a.isSessionActive) {
-      if (
-        ingest &&
-        ingest.result ===
-          'ignored_session_inactive'
-      ) {
-        setDiagnosis(
-          'Traccarから位置はサーバーまで届いていますが、巡行開始前／終了後のため保存していません。実機テストをする場合は管理画面で「巡行を開始する」を押してください。',
-          'warn'
-        );
-      } else {
-        setDiagnosis(
-          '現在はGPS位置の記録停止中です。実機テストを始める場合は、管理画面で「巡行を開始する」を押してください。',
-          'neutral'
-        );
-      }
-      return;
-    }
 
     if (!ingest) {
-      setDiagnosis(
-        '巡行中ですが、巡行開始後にTraccarからの位置がまだサーバーへ届いていません。Traccar Clientの追跡ON、位置情報権限、通信状態を確認してください。「Location filtered」「request no fix」の位置はサーバーには届きません。',
-        'warn'
-      );
+      setText('diagReceive', 'まだ受信なし', 'neutral');
+
+      if (a.sessionMode === 'simulation') {
+        setText('diagReflect', '実GPSは反映しません（シミュレーション中）', 'warn');
+      } else if (!a.isSessionActive) {
+        setText('diagReflect', '停止中（巡行停止中）', 'neutral');
+      } else {
+        setText('diagReflect', '受信待ち', 'warn');
+      }
       return;
     }
 
     if (ingest.result === 'unauthorized') {
-      setDiagnosis(
-        'Traccarからリクエストは届いていますが、書き込みキーが一致していません。Server URLの「?key=...」を確認してください。',
-        'bad'
-      );
+      setText('diagReceive', '受信したがキー不一致', 'bad');
+      setText('diagReflect', '反映していません', 'bad');
       return;
     }
 
     if (ingest.result === 'invalid_location') {
-      setDiagnosis(
-        'Traccarからリクエストは届いていますが、有効な緯度・経度として処理できませんでした。',
-        'bad'
-      );
+      setText('diagReceive', '受信したが位置情報不正', 'bad');
+      setText('diagReflect', '反映していません', 'bad');
       return;
     }
 
-    if (
-      ingest.result ===
-        'ignored_simulation_active'
-    ) {
-      setDiagnosis(
-        '実機Traccarから位置は届いていますが、シミュレーション中のため保存していません。先にシミュレーションを終了・初期化してください。',
-        'warn'
-      );
-      return;
-    }
+    setText(
+      'diagReceive',
+      '正常（' + ageText(ingest.receivedAt) + '）',
+      'ok'
+    );
 
     if (ingest.result === 'saved') {
-      const seconds =
-        ageSeconds(ingest.receivedAt);
-
-      if (seconds <= 90) {
-        setDiagnosis(
-          '実機Traccarから新しい位置がサーバーへ届き、正常に保存されています。',
-          'ok'
-        );
-      } else if (seconds <= 360) {
-        setDiagnosis(
-          'Traccarからの位置は正常に保存されていますが、最終到達から少し時間が空いています。停止中はハートビート300秒（5分）の設定なので、この範囲なら直ちに異常とは限りません。',
-          'warn'
-        );
-      } else {
-        setDiagnosis(
-          '最後に正常保存された位置から5分以上たっています。端末が移動中なら、Traccar Clientのログ、追跡ON、位置情報権限、通信・バッテリー制限を確認してください。',
-          'warn'
-        );
-      }
-      return;
+      setText('diagReflect', '反映中', 'ok');
+    } else if (ingest.result === 'ignored_session_inactive') {
+      setText('diagReflect', 'していません（巡行停止中）', 'neutral');
+    } else if (ingest.result === 'ignored_simulation_active') {
+      setText('diagReflect', 'していません（シミュレーション中）', 'warn');
+    } else {
+      setText('diagReflect', '確認中', 'neutral');
     }
-
-    setDiagnosis(
-      '状態を確認しています。',
-      'neutral'
-    );
-  }
-
-  function setDiagnosis(text, level) {
-    const el =
-      document.getElementById('diagnosis');
-
-    el.className =
-      'diagnosis ' + level;
-
-    el.textContent = text;
   }
 
   function updateHistory(items) {
-    const body =
-      document.getElementById('historyBody');
-
+    const body = document.getElementById('historyBody');
     body.innerHTML = '';
 
     if (!items.length) {
       body.innerHTML =
-        '<tr><td colspan="3">保存されたGPS位置はまだありません。</td></tr>';
+        '<tr><td colspan="4">神輿現在位置に反映した位置情報はまだありません。</td></tr>';
       return;
     }
 
-    [...items]
-      .reverse()
-      .forEach(x => {
-        const tr =
-          document.createElement('tr');
+    [...items].reverse().forEach(x => {
+      const tr = document.createElement('tr');
 
-        tr.innerHTML =
-          '<td>' +
-          esc(shortTime(x.receivedAt)) +
-          '</td>' +
-          '<td>' +
-          esc(
-            isFiniteNumber(x.accuracy)
-              ? Math.round(x.accuracy) +
-                'm'
-              : '—'
-          ) +
-          '</td>' +
-          '<td class="coords mono">' +
-          esc(
-            fmtCoord(
-              x.lat,
-              x.lon
-            )
-          ) +
-          '</td>';
+      tr.innerHTML =
+        '<td>' + esc(shortTime(x.receivedAt)) + '</td>' +
+        '<td class="mono">' + esc(x.deviceIdentifier || '—') + '</td>' +
+        '<td>' + esc(isFiniteNumber(x.accuracy) ? Math.round(x.accuracy) + 'm' : '—') + '</td>' +
+        '<td class="coords mono">' + esc(fmtCoord(x.lat, x.lon)) + '</td>';
 
-        body.appendChild(tr);
-      });
+      body.appendChild(tr);
+    });
   }
 
   function initMap() {
-    map = L.map('map', {
-      zoomControl: true
-    });
+    map = L.map('map', { zoomControl: true });
 
     L.tileLayer(
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
       {
         maxZoom: 19,
-        attribution:
-          '&copy; OpenStreetMap contributors'
+        attribution: '&copy; OpenStreetMap contributors'
       }
     ).addTo(map);
 
-    routeGroup =
-      L.featureGroup().addTo(map);
+    routeGroup = L.featureGroup().addTo(map);
 
-    const data =
-      window.MIKOSHI_ROUTE_DATA;
+    const data = window.MIKOSHI_ROUTE_DATA;
 
-    if (
-      data &&
-      Array.isArray(data.segments)
-    ) {
+    if (data && Array.isArray(data.segments)) {
       data.segments.forEach(s => {
         L.polyline(
           s.coordinates,
@@ -738,142 +617,108 @@
     }
 
     fitRoute();
-
-    setTimeout(
-      () => map.invalidateSize(),
-      100
-    );
+    setTimeout(() => map.invalidateSize(), 100);
   }
 
-  function updateMap(latest, history) {
-    if (!map) return;
+  function updateMap(ingest, latest, history) {
+    [receivedMarker, currentMarker, differenceLine, historyLayer]
+      .filter(Boolean)
+      .forEach(layer => map.removeLayer(layer));
 
-    if (latestMarker) {
-      map.removeLayer(latestMarker);
-      latestMarker = null;
-    }
+    receivedMarker = null;
+    currentMarker = null;
+    differenceLine = null;
+    historyLayer = null;
 
-    if (nearestMarker) {
-      map.removeLayer(nearestMarker);
-      nearestMarker = null;
-    }
-
-    if (connector) {
-      map.removeLayer(connector);
-      connector = null;
-    }
-
-    if (historyLayer) {
-      map.removeLayer(historyLayer);
-      historyLayer = null;
-    }
-
-    if (
-      Array.isArray(history) &&
-      history.length > 1
-    ) {
-      const pts =
-        history
-          .filter(
-            x =>
-              isFiniteNumber(x.lat) &&
-              isFiniteNumber(x.lon)
-          )
-          .map(
-            x => [x.lat, x.lon]
-          );
+    if (Array.isArray(history) && history.length > 1) {
+      const pts = history
+        .filter(x => isFiniteNumber(x.lat) && isFiniteNumber(x.lon))
+        .map(x => [x.lat, x.lon]);
 
       if (pts.length > 1) {
-        historyLayer =
-          L.polyline(
-            pts,
-            {
-              color: '#356f9f',
-              weight: 3,
-              opacity: .65
-            }
-          ).addTo(map);
+        historyLayer = L.polyline(
+          pts,
+          {
+            color: '#7893aa',
+            weight: 3,
+            opacity: .45
+          }
+        ).addTo(map);
       }
     }
 
-    if (
-      !latest ||
-      !isFiniteNumber(latest.lat) ||
-      !isFiniteNumber(latest.lon)
-    ) {
-      document.getElementById(
-        'routeDistance'
-      ).textContent =
-        '保存中の位置がないため、予定経路との距離は計算できません。';
+    const received =
+      ingest &&
+      isFiniteNumber(ingest.lat) &&
+      isFiniteNumber(ingest.lon)
+        ? [Number(ingest.lat), Number(ingest.lon)]
+        : null;
+
+    const current =
+      latest &&
+      isFiniteNumber(latest.lat) &&
+      isFiniteNumber(latest.lon)
+        ? [Number(latest.lat), Number(latest.lon)]
+        : null;
+
+    if (!received && !current) {
+      document.getElementById('mapInfo').textContent =
+        '表示できる位置情報がまだありません。';
       return;
     }
 
-    const raw = [
-      latest.lat,
-      latest.lon
-    ];
+    const same =
+      received &&
+      current &&
+      distanceMeters(received, current) < 1;
 
-    latestMarker =
-      L.circleMarker(
-        raw,
+    if (same) {
+      currentMarker = L.circleMarker(
+        current,
         {
-          radius: 9,
-          color: '#1f5f9b',
-          weight: 3,
+          radius: 10,
+          color: '#65438d',
+          weight: 4,
           fillColor: '#ffffff',
           fillOpacity: 1
         }
       )
       .addTo(map)
-      .bindPopup(
-        '<strong>保存中の位置</strong><br>' +
-        esc(
-          sourceLabel(
-            latest.source
-          )
+      .bindPopup('<strong>受信位置＝神輿現在位置</strong>');
+    } else {
+      if (received) {
+        receivedMarker = L.circleMarker(
+          received,
+          {
+            radius: 9,
+            color: '#356F9F',
+            weight: 3,
+            fillColor: '#ffffff',
+            fillOpacity: 1
+          }
         )
-      );
+        .addTo(map)
+        .bindPopup('<strong>Traccarから最後に受信した位置</strong>');
+      }
 
-    const nearest =
-      nearestRoutePoint(
-        latest.lat,
-        latest.lon
-      );
+      if (current) {
+        currentMarker = L.circleMarker(
+          current,
+          {
+            radius: 9,
+            color: '#8A2D24',
+            weight: 3,
+            fillColor: '#ffffff',
+            fillOpacity: 1
+          }
+        )
+        .addTo(map)
+        .bindPopup('<strong>神輿現在位置</strong><br>' + esc(sourceLabel(latest.source)));
+      }
 
-    if (!nearest) {
-      document.getElementById(
-        'routeDistance'
-      ).textContent =
-        '予定経路データを読み込めませんでした。';
-      return;
-    }
-
-    const distance =
-      nearest.distanceM;
-
-    nearestMarker =
-      L.circleMarker(
-        [nearest.lat, nearest.lon],
-        {
-          radius: 7,
-          color: '#8A2D24',
-          weight: 3,
-          fillColor: '#ffffff',
-          fillOpacity: 1
-        }
-      )
-      .addTo(map)
-      .bindPopup(
-        '<strong>予定経路上の最寄り位置（参考）</strong>'
-      );
-
-    if (distance <= 1000) {
-      connector =
-        L.polyline(
-          [
-            raw,
-            [nearest.lat, nearest.lon]
-          ],
+      if (received && current) {
+        differenceLine = L.polyline(
+          [received, current],
           {
             color: '#777',
             weight: 2,
@@ -881,164 +726,109 @@
             dashArray: '4 5'
           }
         ).addTo(map);
+      }
     }
 
-    const text =
-      distance < 1000
-        ? '予定経路までの最短距離：約' +
-          Math.round(distance) +
-          'm'
-        : '予定経路までの最短距離：約' +
-          (distance / 1000)
-            .toFixed(1) +
-          'km（巡行区域外の実機テストなら正常です）';
+    const parts = [];
 
-    document.getElementById(
-      'routeDistance'
-    ).textContent = text;
+    if (received && current) {
+      const d = distanceMeters(received, current);
+      parts.push(
+        same
+          ? 'Traccar受信位置と神輿現在位置は一致しています。'
+          : 'Traccar受信位置と神輿現在位置の差：約' + Math.round(d) + 'm'
+      );
+    }
+
+    if (received) {
+      const routeDistance = nearestRouteDistance_(received[0], received[1]);
+
+      if (Number.isFinite(routeDistance)) {
+        parts.push(
+          routeDistance < 1000
+            ? 'Traccar受信位置から予定経路まで：約' + Math.round(routeDistance) + 'm'
+            : 'Traccar受信位置から予定経路まで：約' + (routeDistance / 1000).toFixed(1) + 'km（巡行区域外の実機テストなら正常です）'
+        );
+      }
+    }
+
+    document.getElementById('mapInfo').textContent =
+      parts.join('　') || '位置情報を表示しています。';
   }
 
-  function nearestRoutePoint(lat, lon) {
-    const data =
-      window.MIKOSHI_ROUTE_DATA;
+  function nearestRouteDistance_(lat, lon) {
+    const data = window.MIKOSHI_ROUTE_DATA;
+    if (!data || !Array.isArray(data.segments)) return NaN;
 
-    if (
-      !data ||
-      !Array.isArray(data.segments)
-    ) {
-      return null;
-    }
-
-    let best = null;
+    let best = Infinity;
 
     data.segments.forEach(seg => {
       const c = seg.coordinates || [];
 
-      for (
-        let i = 0;
-        i < c.length - 1;
-        i++
-      ) {
-        const p =
-          projectToSegment(
-            lat,
-            lon,
-            c[i][0],
-            c[i][1],
-            c[i + 1][0],
-            c[i + 1][1]
-          );
+      for (let i = 0; i < c.length - 1; i++) {
+        const d = pointSegmentDistance_(
+          lat, lon,
+          c[i][0], c[i][1],
+          c[i + 1][0], c[i + 1][1]
+        );
 
-        if (
-          !best ||
-          p.distanceM <
-            best.distanceM
-        ) {
-          best = p;
-        }
+        if (d < best) best = d;
       }
     });
 
     return best;
   }
 
-  function projectToSegment(
-    lat,
-    lon,
-    lat1,
-    lon1,
-    lat2,
-    lon2
-  ) {
-    const refLat =
-      (
-        lat +
-        lat1 +
-        lat2
-      ) / 3 *
-      Math.PI / 180;
-
-    const mx =
-      111320 *
-      Math.cos(refLat);
+  function pointSegmentDistance_(lat, lon, lat1, lon1, lat2, lon2) {
+    const refLat = (lat + lat1 + lat2) / 3 * Math.PI / 180;
+    const mx = 111320 * Math.cos(refLat);
     const my = 110540;
 
-    const px =
-      (lon - lon1) * mx;
-    const py =
-      (lat - lat1) * my;
-    const bx =
-      (lon2 - lon1) * mx;
-    const by =
-      (lat2 - lat1) * my;
+    const px = (lon - lon1) * mx;
+    const py = (lat - lat1) * my;
+    const bx = (lon2 - lon1) * mx;
+    const by = (lat2 - lat1) * my;
+    const len2 = bx * bx + by * by;
 
-    const len2 =
-      bx * bx + by * by;
+    let t = len2 > 0 ? (px * bx + py * by) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
 
-    let t =
-      len2 > 0
-        ? (px * bx + py * by) /
-          len2
-        : 0;
+    const dx = px - bx * t;
+    const dy = py - by * t;
 
-    t =
-      Math.max(
-        0,
-        Math.min(1, t)
-      );
-
-    const qx = bx * t;
-    const qy = by * t;
-
-    const qLon =
-      lon1 + qx / mx;
-    const qLat =
-      lat1 + qy / my;
-
-    const dx = px - qx;
-    const dy = py - qy;
-
-    return {
-      lat: qLat,
-      lon: qLon,
-      distanceM:
-        Math.sqrt(
-          dx * dx + dy * dy
-        )
-    };
+    return Math.sqrt(dx * dx + dy * dy);
   }
 
-  function focusLatest() {
+  function focusReceived() {
+    const x = lastDebug && lastDebug.lastIngest;
+
     if (
-      !lastDebug ||
-      !lastDebug.admin ||
-      !lastDebug.admin.latest
-    ) {
-      return;
-    }
+      !x ||
+      !isFiniteNumber(x.lat) ||
+      !isFiniteNumber(x.lon)
+    ) return;
 
-    const x =
-      lastDebug.admin.latest;
+    map.setView([Number(x.lat), Number(x.lon)], 17);
+    if (receivedMarker) receivedMarker.openPopup();
+    else if (currentMarker) currentMarker.openPopup();
+  }
 
-    map.setView(
-      [x.lat, x.lon],
-      17
-    );
+  function focusCurrent() {
+    const x = lastDebug && lastDebug.admin && lastDebug.admin.latest;
 
-    latestMarker &&
-      latestMarker.openPopup();
+    if (
+      !x ||
+      !isFiniteNumber(x.lat) ||
+      !isFiniteNumber(x.lon)
+    ) return;
+
+    map.setView([Number(x.lat), Number(x.lon)], 17);
+    if (currentMarker) currentMarker.openPopup();
   }
 
   function fitRoute() {
-    if (
-      routeGroup &&
-      routeGroup.getBounds().isValid()
-    ) {
-      map.fitBounds(
-        routeGroup
-          .getBounds()
-          .pad(.06)
-      );
+    if (routeGroup && routeGroup.getBounds().isValid()) {
+      map.fitBounds(routeGroup.getBounds().pad(.06));
     }
   }
 
@@ -1048,117 +838,74 @@
     const a = lastDebug.admin;
     const ingest = lastDebug.lastIngest;
     const latest = a.latest;
+    const meta =
+      window.MIKOSHI_ROUTE_DATA &&
+      window.MIKOSHI_ROUTE_DATA.metadata;
 
     const lines = [
       '赤城神社 神輿位置 診断',
-      'Backend: ' +
-        (lastDebug.backendVersion || '—'),
-      'サーバ時刻: ' +
-        jpTime(lastDebug.serverTime),
-      'API応答: ' +
-        (
-          lastLatency !== null
-            ? lastLatency + 'ms'
-            : '—'
-        ),
+      'システム: ' + SYSTEM_VERSION,
+      'Backend: ' + (lastDebug.backendVersion || '—'),
+      '巡行ルート・予定データ: ' +
+        (meta ? (meta.dataVersion || '—') + ' / ' + (meta.updatedAt || '—') : '—'),
+      'API応答: ' + (lastLatency !== null ? lastLatency + 'ms' : '—'),
       '巡行状態: ' +
         (
           a.isSessionActive
-            ? (
-                a.sessionMode ===
-                  'simulation'
-                  ? 'シミュレーション中'
-                  : '巡行中'
-              )
+            ? (a.sessionMode === 'simulation' ? 'シミュレーション中' : '巡行中')
             : '停止中'
         ),
-      '公開: ' +
-        (a.isPublic ? '表示中' : '非表示'),
-      'Traccar最終到達: ' +
+      '一般向け地図: ' + (a.isPublic ? '神輿位置を表示中' : '神輿位置を非表示'),
+      'Traccar最終受信: ' +
         (
           ingest
-            ? jpTime(
-                ingest.receivedAt
-              ) +
+            ? jpTime(ingest.receivedAt) +
               ' / ' +
-              ingestResultLabel(
-                ingest.result
-              )
+              ingestResultLabel(ingest.result) +
+              ' / デバイス識別子 ' +
+              (ingest.deviceIdentifier || '—')
             : 'なし'
         ),
-      '保存中位置: ' +
+      '神輿現在位置: ' +
         (
           latest
-            ? sourceLabel(
-                latest.source
-              ) +
+            ? sourceLabel(latest.source) +
               ' / ' +
-              fmtCoord(
-                latest.lat,
-                latest.lon
-              ) +
+              fmtCoord(latest.lat, latest.lon) +
               ' / ' +
               (
-                isFiniteNumber(
-                  latest.accuracy
-                )
-                  ? '精度約' +
-                    Math.round(
-                      latest.accuracy
-                    ) +
-                    'm'
+                isFiniteNumber(latest.accuracy)
+                  ? '精度約' + Math.round(latest.accuracy) + 'm'
                   : '精度—'
               )
             : 'なし'
         ),
-      '通過履歴: ' +
-        (a.trailCount || 0) +
-        '点',
-      '画面診断: ' +
-        document
-          .getElementById('diagnosis')
-          .textContent
+      '経路記録: ' + (a.trailCount || 0) + '点',
+      'Traccar受信: ' + document.getElementById('diagReceive').textContent,
+      '神輿現在位置への反映: ' + document.getElementById('diagReflect').textContent
     ];
 
     try {
-      await navigator.clipboard.writeText(
-        lines.join('\n')
-      );
-
-      setCopyMessage(
-        '診断情報をコピーしました。',
-        false
-      );
+      await navigator.clipboard.writeText(lines.join('\n'));
+      setCopyMessage('診断情報をコピーしました。', false);
     } catch (e) {
-      setCopyMessage(
-        'コピーできませんでした。',
-        true
-      );
+      setCopyMessage('コピーできませんでした。', true);
     }
   }
 
   function setCopyMessage(text, error) {
-    const el =
-      document.getElementById('copyMessage');
-
-    el.className =
-      'message' + (error ? ' error' : '');
-
+    const el = document.getElementById('copyMessage');
+    el.className = 'message' + (error ? ' error' : '');
     el.textContent = text;
   }
 
   function ingestResultLabel(v) {
     const labels = {
-      saved:
-        '正常保存',
-      ignored_session_inactive:
-        '到達したが巡行停止中のため保存せず',
-      ignored_simulation_active:
-        '到達したがシミュレーション中のため保存せず',
-      unauthorized:
-        '書き込みキー不一致',
-      invalid_location:
-        '位置データ不正'
+      saved: '受信済み／神輿現在位置に反映',
+      ignored_session_inactive: '受信済み／神輿現在位置には反映せず（巡行停止中）',
+      ignored_simulation_active: '受信済み／神輿現在位置には反映せず（シミュレーション中）',
+      unauthorized: '受信したが書き込みキー不一致',
+      invalid_location: '受信したが位置情報不正'
     };
 
     return labels[v] || String(v || '—');
@@ -1166,106 +913,46 @@
 
   function sourceLabel(v) {
     if (v === 'gps') return '実GPS';
-    if (v === 'simulation') {
-      return 'シミュレーション';
-    }
-    if (v === 'default') {
-      return '赤城神社（初期位置）';
-    }
+    if (v === 'simulation') return 'シミュレーション';
+    if (v === 'default') return '赤城神社（初期位置）';
     return String(v || '不明');
   }
 
   function setText(id, text, cls) {
-    const el =
-      document.getElementById(id);
-
+    const el = document.getElementById(id);
     el.textContent = text;
-    el.className =
-      'value ' + (cls || 'neutral');
+    el.className = cls || '';
+  }
+
+  function setValue(id, text, cls) {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'value ' + (cls || 'neutral');
   }
 
   function fmtCoord(lat, lon) {
-    if (
-      !isFiniteNumber(lat) ||
-      !isFiniteNumber(lon)
-    ) {
-      return '—';
-    }
+    if (!isFiniteNumber(lat) || !isFiniteNumber(lon)) return '—';
 
-    return (
-      Number(lat).toFixed(6) +
-      ', ' +
-      Number(lon).toFixed(6)
-    );
+    return Number(lat).toFixed(6) + ', ' + Number(lon).toFixed(6);
   }
 
   function isFiniteNumber(v) {
-    return Number.isFinite(
-      Number(v)
-    );
-  }
-
-  function ageSeconds(value) {
-    const t =
-      new Date(value).getTime();
-
-    if (!Number.isFinite(t)) {
-      return Infinity;
-    }
-
-    return Math.max(
-      0,
-      Math.floor(
-        (
-          Date.now() - t
-        ) / 1000
-      )
-    );
+    return Number.isFinite(Number(v));
   }
 
   function ageText(value) {
-    const sec =
-      ageSeconds(value);
+    if (!value) return '—';
+    const s = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
 
-    if (!Number.isFinite(sec)) {
-      return '時刻不明';
-    }
-
-    if (sec < 60) {
-      return sec + '秒前';
-    }
-
-    if (sec < 3600) {
-      return (
-        Math.floor(sec / 60) +
-        '分' +
-        (sec % 60) +
-        '秒前'
-      );
-    }
-
-    return (
-      Math.floor(sec / 3600) +
-      '時間' +
-      Math.floor(
-        (sec % 3600) / 60
-      ) +
-      '分前'
-    );
+    if (s < 60) return s + '秒前';
+    if (s < 3600) return Math.floor(s / 60) + '分' + (s % 60) + '秒前';
+    return Math.floor(s / 3600) + '時間' + Math.floor((s % 3600) / 60) + '分前';
   }
 
   function jpTime(value) {
     if (!value) return '—';
-
     const d = new Date(value);
-
-    if (
-      Number.isNaN(
-        d.getTime()
-      )
-    ) {
-      return '—';
-    }
+    if (Number.isNaN(d.getTime())) return '—';
 
     return d.toLocaleString(
       'ja-JP',
@@ -1282,16 +969,8 @@
 
   function shortTime(value) {
     if (!value) return '—';
-
     const d = new Date(value);
-
-    if (
-      Number.isNaN(
-        d.getTime()
-      )
-    ) {
-      return '—';
-    }
+    if (Number.isNaN(d.getTime())) return '—';
 
     return d.toLocaleTimeString(
       'ja-JP',
@@ -1304,6 +983,23 @@
     );
   }
 
+  function distanceMeters(a, b) {
+    const R = 6371000;
+    const toRad = Math.PI / 180;
+    const p1 = a[0] * toRad;
+    const p2 = b[0] * toRad;
+    const dp = (b[0] - a[0]) * toRad;
+    const dl = (b[1] - a[1]) * toRad;
+
+    const h =
+      Math.sin(dp / 2) ** 2 +
+      Math.cos(p1) *
+      Math.cos(p2) *
+      Math.sin(dl / 2) ** 2;
+
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+
   function callAdmin(action) {
     return jsonp({
       mode: 'admin',
@@ -1313,118 +1009,76 @@
   }
 
   function jsonp(params) {
-    return new Promise(
-      (resolve, reject) => {
-        const cb =
-          '__mikoshiDebug_' +
-          Date.now() +
-          '_' +
-          (++seq);
+    return new Promise((resolve, reject) => {
+      const cb =
+        '__mikoshiDebug_' +
+        Date.now() +
+        '_' +
+        (++seq);
 
-        let script =
-          document.createElement(
-            'script'
-          );
+      let script = document.createElement('script');
 
-        const timer =
-          setTimeout(
-            () => {
-              cleanup();
-              reject(
-                new Error(
-                  'timeout'
-                )
-              );
-            },
-            10000
-          );
+      const timer = setTimeout(
+        () => {
+          cleanup();
+          reject(new Error('timeout'));
+        },
+        10000
+      );
 
-        function cleanup() {
-          clearTimeout(timer);
+      function cleanup() {
+        clearTimeout(timer);
 
-          if (
-            script.parentNode
-          ) {
-            script.parentNode
-              .removeChild(
-                script
-              );
-          }
-
-          try {
-            delete window[cb];
-          } catch (e) {
-            window[cb] =
-              undefined;
-          }
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
         }
 
-        window[cb] =
-          data => {
-            cleanup();
-            resolve(data);
-          };
-
-        const q =
-          new URLSearchParams({
-            ...params,
-            callback: cb,
-            _: String(
-              Date.now()
-            )
-          });
-
-        script.src =
-          window.MIKOSHI_API_URL +
-          '?' +
-          q.toString();
-
-        script.async = true;
-
-        script.onerror =
-          () => {
-            cleanup();
-            reject(
-              new Error(
-                'network'
-              )
-            );
-          };
-
-        document.body
-          .appendChild(script);
+        try {
+          delete window[cb];
+        } catch (e) {
+          window[cb] = undefined;
+        }
       }
-    );
+
+      window[cb] = data => {
+        cleanup();
+        resolve(data);
+      };
+
+      const q = new URLSearchParams({
+        ...params,
+        callback: cb,
+        _: String(Date.now())
+      });
+
+      script.src =
+        window.MIKOSHI_API_URL +
+        '?' +
+        q.toString();
+
+      script.async = true;
+
+      script.onerror = () => {
+        cleanup();
+        reject(new Error('network'));
+      };
+
+      document.body.appendChild(script);
+    });
   }
 
   async function sha256Hex(text) {
-    const bytes =
-      new TextEncoder()
-        .encode(text);
+    const bytes = new TextEncoder().encode(text);
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
 
-    const digest =
-      await crypto.subtle.digest(
-        'SHA-256',
-        bytes
-      );
-
-    return Array.from(
-      new Uint8Array(digest)
-    )
-      .map(
-        b =>
-          b
-            .toString(16)
-            .padStart(2, '0')
-      )
+    return Array.from(new Uint8Array(digest))
+      .map(b => b.toString(16).padStart(2, '0'))
       .join('');
   }
 
   function clearSession() {
     token = '';
-    sessionStorage.removeItem(
-      'mikoshiAdminToken'
-    );
+    sessionStorage.removeItem('mikoshiAdminToken');
   }
 
   function esc(v) {

@@ -52,3 +52,6 @@ select:disabled{opacity:1;color:#222;-webkit-text-fill-color:#222;background:#f2
 .observer-progress div{display:grid;grid-template-columns:92px 1fr;gap:8px}
 .observer-progress strong{color:#4a6173}
 .observer-note{font-size:12px;line-height:1.65;margin-top:10px;color:#3c5870}
+
+.title-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.version-badge{display:inline-block;white-space:nowrap;border-radius:999px;background:#fff1cd;color:#74530a;padding:4px 8px;font-size:11px;font-weight:bold}

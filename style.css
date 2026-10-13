@@ -42,3 +42,25 @@ body{display:flex;flex-direction:column}
 #simulationBadge{display:none;position:absolute;z-index:880;left:50%;top:10px;transform:translateX(-50%);background:#fff3cd;border:1px solid #c69419;color:#6a4c00;border-radius:7px;padding:6px 10px;font:700 12px Meiryo,sans-serif;box-shadow:0 1px 5px rgba(0,0,0,.18);pointer-events:none}
 
 .legend-stop{display:inline-block;width:12px;height:12px;border:3px solid #586979;border-radius:50%;background:#fff;box-sizing:border-box;margin-left:2px}
+
+#noticeDock{max-width:980px;margin:0 auto 8px}
+#noticeDock.hidden{display:none}
+.notice-panel{border-radius:10px;padding:11px 12px;border:2px solid #c7a74e;background:#fff8df;color:#4b3a0d;box-shadow:0 2px 5px rgba(0,0,0,.08)}
+.notice-panel.important{border-color:#b3261e;background:#fff0ef;color:#6f211c}
+.notice-panel.hidden{display:none}
+.notice-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:7px}
+.notice-head strong{font-size:16px}
+#noticeClose{flex:0 0 auto;width:36px;height:36px;border:0;border-radius:50%;background:rgba(255,255,255,.75);font-size:21px}
+#noticeText{font-size:15px;line-height:1.7;font-weight:600}
+#noticeUpdated{font-size:11px;margin-top:7px;opacity:.72}
+.notice-collapsed{border:1px solid #c7a74e;background:#fff8df;color:#4b3a0d;border-radius:999px;padding:8px 13px;font-weight:bold}
+.notice-collapsed.hidden{display:none}
+#updateInfo{display:none;max-width:980px;margin:7px auto 0;padding:0 4px;color:#666;font-size:11px;line-height:1.5}
+.inline-info{width:24px;height:24px;border-radius:50%;border:1px solid #bbb;background:#f2f2f2;color:#444;font-size:12px;padding:0;margin-left:2px;vertical-align:middle}
+.version-badge{display:inline-block;border-radius:999px;background:#eee;color:#666;padding:2px 7px;font-size:10px;font-weight:bold;white-space:nowrap}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:5000;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal.hidden{display:none}
+.modal-card{width:min(500px,100%);background:#fff;border-radius:12px;box-shadow:0 10px 35px rgba(0,0,0,.25)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;border-bottom:1px solid #ddd}
+.modal-head button{width:36px;height:36px;border:0;border-radius:50%;background:#eee;font-size:20px}
+.modal-body{padding:14px;font-size:14px;line-height:1.8}

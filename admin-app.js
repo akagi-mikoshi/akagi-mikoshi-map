@@ -1,10 +1,11 @@
 (() => {
-  const VERSION = '11';
+  const VERSION = '12';
   let token = sessionStorage.getItem('mikoshiAdminToken') || '';
   let busy = false;
   let currentPublicState = false;
   let lastAdminState = null;
   let seq = 0;
+  let noticeEditorDirty = false;
 
   function loadCss(url) {
     return new Promise((resolve, reject) => {
@@ -52,7 +53,7 @@
     document.body.innerHTML = `
       <div class="wrap">
         <div class="card">
-          <h1>赤城神社 神輿位置 管理</h1>
+          <div class="title-row"><h1>赤城神社 神輿位置 管理</h1><span class="version-badge">RC3-D2</span></div>
           <div id="loginBox">
             <label for="password">管理用パスワード</label>
             <input id="password" type="password" autocomplete="current-password">
@@ -74,6 +75,10 @@
           <div class="card">
             <h2>当日の一括操作</h2>
             <div id="operationState" class="operation-state">状態を確認しています…</div>
+            <div class="gps-rule">
+              GPS位置情報は、巡行中のみ神輿現在位置に反映されます。
+              <button id="gpsRuleInfoBtn" class="inline-info" type="button" aria-label="説明">ⓘ</button>
+            </div>
             <div class="stack">
               <button id="startBtn" class="safe">巡行を開始する</button>
               <button id="endBtn" class="danger">巡行を終了する</button>
@@ -82,6 +87,24 @@
               <div><strong>巡行を開始する：</strong>位置履歴を初期化し、追跡用スマホから届くGPS位置の記録を開始します。赤城神社を初期位置として、一般向け地図への神輿位置表示も開始します。</div>
               <div><strong>巡行を終了する：</strong>GPS位置の記録と地図上の神輿位置表示を停止し、位置履歴を消去して、位置データを赤城神社へ戻します。</div>
             </div>
+          </div>
+
+          <div class="card">
+            <h2>一般向け地図へのお知らせ</h2>
+            <div class="muted" style="margin-bottom:10px">
+              地図を開いている利用者へ、通常は約15秒以内に反映されます。スマートフォンへのプッシュ通知ではありません。
+            </div>
+            <textarea id="noticeText" maxlength="160" rows="3" placeholder="例：雨天のため、巡行開始が10分程度遅れています。"></textarea>
+            <div class="notice-editor-row">
+              <label><input type="radio" name="noticeLevel" value="normal" checked> 通常</label>
+              <label><input type="radio" name="noticeLevel" value="important"> 重要</label>
+              <span id="noticeCount">0 / 160</span>
+            </div>
+            <div class="stack">
+              <button id="noticeSetBtn" class="primary">お知らせを表示・更新</button>
+              <button id="noticeClearBtn" class="outline">お知らせの表示を終了</button>
+            </div>
+            <div id="currentNotice" class="current-notice">現在表示中のお知らせ：なし</div>
           </div>
 
           <div class="card">
@@ -109,6 +132,7 @@
             <h2>管理</h2>
             <div class="stack">
               <button id="refreshBtn" class="small-btn">現在の状態を再確認</button>
+              <button id="manualBtn" class="small-btn">操作マニュアルを開く</button>
               <button id="debugBtn" class="small-btn">診断画面を開く</button>
               <button id="logoutBtn" class="small-btn">ログアウト</button>
             </div>
@@ -116,6 +140,12 @@
         </div>
 
         <div class="footer">管理セッションはログインから12時間有効です。ブラウザやタブを閉じた場合は再ログインが必要になることがあります。<br>管理用URLは一般向けQRコードには使用しません。</div>
+      </div>
+      <div id="infoModal" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-card">
+          <div class="modal-head"><strong id="infoModalTitle">説明</strong><button id="infoModalClose" type="button">×</button></div>
+          <div id="infoModalBody" class="modal-body"></div>
+        </div>
       </div>`;
 
     document.getElementById('loginBtn').onclick = login;
@@ -168,7 +198,30 @@
         'clearHistory'
       );
 
+    document.getElementById('noticeText').addEventListener('input', () => {
+      noticeEditorDirty = true;
+      updateNoticeCount_();
+    });
+
+    document.getElementById('noticeSetBtn').onclick = setNotice_;
+    document.getElementById('noticeClearBtn').onclick = clearNotice_;
+
+    document.getElementById('gpsRuleInfoBtn').onclick = () => {
+      openInfo_(
+        'GPS位置情報の反映',
+        '巡行開始前・終了後にTraccar Clientから受信した位置情報は、診断画面では確認できますが、一般向け地図の神輿現在位置には反映されません。'
+      );
+    };
+
+    document.getElementById('infoModalClose').onclick = closeInfo_;
+    document.getElementById('infoModal').addEventListener('click', e => {
+      if (e.target.id === 'infoModal') closeInfo_();
+    });
+
     document.getElementById('refreshBtn').onclick = refresh;
+    document.getElementById('manualBtn').onclick = () => {
+      window.open('./manual.html', '_blank');
+    };
     document.getElementById('debugBtn').onclick = () => {
       window.open('./debug.html', '_blank');
     };
@@ -356,7 +409,7 @@
           : x.source === 'simulation'
             ? 'シミュレーション'
             : 'GPS';
-      h += '<div><strong>保存中の位置</strong>' + esc(src) + '</div>';
+      h += '<div><strong>神輿現在位置</strong>' + esc(src) + '</div>';
       h += '<div><strong>最終受信</strong>' + esc(jpTime(x.receivedAt)) + '（' + esc(age(x.receivedAt)) + '）</div>';
 
       if (
@@ -371,13 +424,12 @@
         Number(x.lat).toFixed(6) + ', ' +
         Number(x.lon).toFixed(6) + '</div>';
     } else {
-      h += '<div><strong>保存中の位置</strong>未登録</div>';
+      h += '<div><strong>神輿現在位置</strong>未登録</div>';
     }
 
-    h += '<div><strong>直近確認履歴</strong>' + Number(state.historyCount || 0) + '件</div>';
-    h += '<div><strong>通過記録</strong>' + Number(state.trailCount || 0) + '点</div>';
-
     document.getElementById('stateInfo').innerHTML = h;
+
+    updateNoticeState_(state.notice);
 
     const recoveryCard =
       document.getElementById('simulationRecoveryCard');
@@ -466,6 +518,140 @@
     }
   }
 
+  function updateNoticeCount_() {
+    const box = document.getElementById('noticeText');
+    const count = document.getElementById('noticeCount');
+
+    if (box && count) {
+      count.textContent = box.value.length + ' / 160';
+    }
+  }
+
+  function updateNoticeState_(notice) {
+    const current = document.getElementById('currentNotice');
+    const clearBtn = document.getElementById('noticeClearBtn');
+    const box = document.getElementById('noticeText');
+
+    if (!current) return;
+
+    if (notice && notice.text) {
+      current.innerHTML =
+        '<strong>現在表示中：</strong>' +
+        esc(notice.text) +
+        '<br><span class="muted">更新 ' +
+        esc(jpTime(notice.updatedAt)) +
+        ' / ' +
+        (notice.level === 'important' ? '重要' : '通常') +
+        '</span>';
+
+      if (clearBtn) clearBtn.disabled = busy;
+
+      if (box && !noticeEditorDirty) {
+        box.value = notice.text;
+        const radio = document.querySelector(
+          'input[name="noticeLevel"][value="' +
+          (notice.level === 'important' ? 'important' : 'normal') +
+          '"]'
+        );
+        if (radio) radio.checked = true;
+        updateNoticeCount_();
+      }
+    } else {
+      current.textContent = '現在表示中のお知らせ：なし';
+      if (clearBtn) clearBtn.disabled = true;
+
+      if (box && !noticeEditorDirty) {
+        box.value = '';
+        const normal = document.querySelector(
+          'input[name="noticeLevel"][value="normal"]'
+        );
+        if (normal) normal.checked = true;
+        updateNoticeCount_();
+      }
+    }
+  }
+
+  async function setNotice_() {
+    if (busy || !token) return;
+
+    const box = document.getElementById('noticeText');
+    const text = box.value.trim();
+
+    if (!text) {
+      mainMessage('お知らせの本文を入力してください。', true);
+      box.focus();
+      return;
+    }
+
+    const level =
+      document.querySelector('input[name="noticeLevel"]:checked')?.value ||
+      'normal';
+
+    setBusy(true);
+    mainMessage('お知らせを更新しています…');
+
+    try {
+      const r = await callAdmin(
+        'noticeSet',
+        {
+          noticeText: text,
+          noticeLevel: level
+        }
+      );
+
+      if (!r.ok) {
+        if (r.error === 'session_expired') return expired();
+        throw new Error(r.error || 'failed');
+      }
+
+      noticeEditorDirty = false;
+      updateState(r.state);
+      mainMessage('一般向け地図のお知らせを更新しました。', false, true);
+    } catch (e) {
+      mainMessage('お知らせを更新できませんでした。', true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function clearNotice_() {
+    if (busy || !token) return;
+
+    if (!confirm('一般向け地図のお知らせ表示を終了します。よろしいですか？')) {
+      return;
+    }
+
+    setBusy(true);
+    mainMessage('お知らせを終了しています…');
+
+    try {
+      const r = await callAdmin('noticeClear');
+
+      if (!r.ok) {
+        if (r.error === 'session_expired') return expired();
+        throw new Error('failed');
+      }
+
+      noticeEditorDirty = false;
+      updateState(r.state);
+      mainMessage('お知らせの表示を終了しました。', false, true);
+    } catch (e) {
+      mainMessage('お知らせを終了できませんでした。', true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function openInfo_(title, text) {
+    document.getElementById('infoModalTitle').textContent = title;
+    document.getElementById('infoModalBody').textContent = text;
+    document.getElementById('infoModal').classList.remove('hidden');
+  }
+
+  function closeInfo_() {
+    document.getElementById('infoModal').classList.add('hidden');
+  }
+
   function jpTime(v) {
     if (!v) return '—';
     return new Date(v).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -491,6 +677,7 @@
     if (!v && lastAdminState) {
       // 通信処理後も、巡行状態に応じたボタンの有効／無効を維持する。
       updateActionButtons_(lastAdminState);
+      updateNoticeState_(lastAdminState.notice);
 
       const simulationEndBtn =
         document.getElementById('simulationEndBtn');
@@ -509,8 +696,8 @@
     el.textContent = text;
   }
 
-  function callAdmin(action) {
-    return jsonp({ mode:'admin', action, token });
+  function callAdmin(action, params={}) {
+    return jsonp({ mode:'admin', action, token, ...params });
   }
 
   function jsonp(params) {
