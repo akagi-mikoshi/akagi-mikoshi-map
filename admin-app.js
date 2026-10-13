@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = '12';
+  const VERSION = '13';
   let token = sessionStorage.getItem('mikoshiAdminToken') || '';
   let busy = false;
   let currentPublicState = false;
@@ -53,7 +53,7 @@
     document.body.innerHTML = `
       <div class="wrap">
         <div class="card">
-          <div class="title-row"><h1>赤城神社 神輿位置 管理</h1><span class="version-badge">RC3-D2</span></div>
+          <div class="title-row"><h1>赤城神社 神輿位置 管理</h1><span class="version-badge">RC3-D2.1</span></div>
           <div id="loginBox">
             <label for="password">管理用パスワード</label>
             <input id="password" type="password" autocomplete="current-password">
@@ -125,6 +125,7 @@
             <div class="danger-stack">
               <button id="resetBtn" class="caution">神輿位置の表示・記録を停止して赤城神社へリセット</button>
               <button id="clearBtn" class="caution">位置履歴を消去</button>
+              <button id="debugClearBtn" class="caution">診断用の最終受信情報を消去</button>
             </div>
           </div>
 
@@ -197,6 +198,8 @@
         '保存されている位置履歴を消去します。現在位置そのものは変更しません。よろしいですか？',
         'clearHistory'
       );
+
+    document.getElementById('debugClearBtn').onclick = clearDebugLastIngest_;
 
     document.getElementById('noticeText').addEventListener('input', () => {
       noticeEditorDirty = true;
@@ -465,6 +468,7 @@
     const startBtn = document.getElementById('startBtn');
     const endBtn = document.getElementById('endBtn');
     const clearBtn = document.getElementById('clearBtn');
+    const debugClearBtn = document.getElementById('debugClearBtn');
     const operationState =
       document.getElementById('operationState');
 
@@ -515,6 +519,39 @@
       clearBtn.disabled =
         busy ||
         !!state.isSessionActive;
+    }
+
+    if (debugClearBtn) {
+      debugClearBtn.disabled = busy;
+    }
+  }
+
+  async function clearDebugLastIngest_() {
+    if (busy || !token) return;
+
+    if (!confirm(
+      '診断画面に表示される「Traccarから最後に受信した位置情報」だけを消去します。神輿現在位置や通過済み経路には影響しません。よろしいですか？'
+    )) {
+      return;
+    }
+
+    setBusy(true);
+    mainMessage('診断用の最終受信情報を消去しています…');
+
+    try {
+      const r = await callAdmin('debugClearLastIngest');
+
+      if (!r.ok) {
+        if (r.error === 'session_expired') return expired();
+        throw new Error('failed');
+      }
+
+      updateState(r.state);
+      mainMessage('診断用の最終受信情報を消去しました。', false, true);
+    } catch (e) {
+      mainMessage('診断用の最終受信情報を消去できませんでした。', true);
+    } finally {
+      setBusy(false);
     }
   }
 

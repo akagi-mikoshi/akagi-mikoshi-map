@@ -1,12 +1,12 @@
 (() => {
-  const VERSION = '9';
+  const VERSION = '10';
   const LEAFLET_CSS = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
   const LEAFLET_JS  = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
   const MIKOSHI_IMAGE = './mikoshi_marker.png?v=' + VERSION;
   const TEST_MODE =
     new URLSearchParams(window.location.search).get('test') === '1';
   const POLL_INTERVAL_MS = TEST_MODE ? 2000 : 15000;
-  const SYSTEM_VERSION = 'RC3-D2';
+  const SYSTEM_VERSION = 'RC3-D2.1';
   let currentNoticeId = null;
 
   let map = null;
@@ -61,10 +61,10 @@
           '<div id="noticeText"></div>' +
           '<div id="noticeUpdated"></div>' +
         '</div>' +
-        '<button id="noticeCollapsed" class="notice-collapsed hidden" type="button">お知らせ</button>' +
       '</div>' +
       '<div id="mapWrap">' +
         '<div id="map"></div>' +
+        '<button id="noticeCollapsed" class="notice-collapsed hidden" type="button" aria-label="お知らせを表示">お知らせ</button>' +
         '<button id="mapControlsButton" class="map-ui-btn" type="button">地図操作</button>' +
         '<div id="mapControlsPanel" aria-hidden="true">' +
           '<button id="fitRouteQuickButton" type="button">予定経路全体を表示</button>' +
@@ -78,7 +78,7 @@
         '<div id="schedulePanel" aria-hidden="true"></div>' +
       '</div>' +
       '<div id="status"></div>' +
-      '<div id="updateInfo">位置情報・お知らせは約' + (POLL_INTERVAL_MS / 1000) + '秒ごとに自動更新します。<button id="updateInfoBtn" class="inline-info" type="button" aria-label="更新について">ⓘ</button> <span class="version-badge">' + SYSTEM_VERSION + '</span></div>' +
+      '<div id="updateInfo"><strong>自動更新：約' + (POLL_INTERVAL_MS / 1000) + '秒ごと</strong>（位置情報・お知らせ） <button id="updateInfoBtn" class="inline-info" type="button" aria-label="更新について">ⓘ</button> <span class="version-badge">' + SYSTEM_VERSION + '</span></div>' +
       '<div id="note">※予定時刻は進行状況により前後する場合があります。休憩中などは位置情報の更新間隔が空くことがあります。GPSや通信状況により、実際の場所から多少ずれる場合があります。</div>' +
       '<div id="publicInfoModal" class="modal hidden"><div class="modal-card"><div class="modal-head"><strong>自動更新について</strong><button id="publicInfoClose" type="button">×</button></div><div class="modal-body">このページを開いている間、位置情報とお知らせを自動的に更新します。スマートフォンへのプッシュ通知ではないため、ページを閉じている間に通知が届く機能ではありません。</div></div></div>';
   }
@@ -992,11 +992,13 @@
       } catch (e) {}
 
       document.getElementById('noticePanel').classList.add('hidden');
+      document.getElementById('noticeDock').classList.add('hidden');
       document.getElementById('noticeCollapsed').classList.remove('hidden');
     });
 
     document.getElementById('noticeCollapsed').addEventListener('click', () => {
       document.getElementById('noticeCollapsed').classList.add('hidden');
+      document.getElementById('noticeDock').classList.remove('hidden');
       document.getElementById('noticePanel').classList.remove('hidden');
     });
 
@@ -1045,7 +1047,6 @@
     const wasDismissed =
       dismissedId === notice.id;
 
-    dock.classList.remove('hidden');
     panel.className =
       'notice-panel ' +
       (notice.level === 'important' ? 'important' : 'normal');
@@ -1060,9 +1061,11 @@
       '更新 ' + formatNoticeTime_(notice.updatedAt);
 
     if (isNew || !wasDismissed) {
+      dock.classList.remove('hidden');
       panel.classList.remove('hidden');
       collapsed.classList.add('hidden');
     } else {
+      dock.classList.add('hidden');
       panel.classList.add('hidden');
       collapsed.classList.remove('hidden');
     }

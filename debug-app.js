@@ -1,6 +1,6 @@
 (() => {
   const VERSION = '2';
-  const SYSTEM_VERSION = 'RC3-D2';
+  const SYSTEM_VERSION = 'RC3-D2.1';
   const LEAFLET_CSS =
     'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
   const LEAFLET_JS =
@@ -166,10 +166,10 @@
             <table class="kv">
               <tr><th>システムバージョン</th><td>${SYSTEM_VERSION}</td></tr>
               <tr><th>Backend</th><td id="backendVersion">—</td></tr>
-              <tr><th>公開地図</th><td>app v9</td></tr>
-              <tr><th>管理画面</th><td>admin v12</td></tr>
-              <tr><th>診断画面</th><td>debug v2</td></tr>
-              <tr><th>シミュレーション</th><td>simulator v8</td></tr>
+              <tr><th>公開地図</th><td>app v10</td></tr>
+              <tr><th>管理画面</th><td>admin v13</td></tr>
+              <tr><th>診断画面</th><td>debug v3</td></tr>
+              <tr><th>シミュレーション</th><td>simulator v9</td></tr>
               <tr><th>巡行ルート・予定データ</th><td><span id="routeDataInfo">—</span> <button class="inline-info" data-info="routeData">ⓘ</button></td></tr>
               <tr><th>サーバー時刻</th><td id="serverTime">—</td></tr>
               <tr><th>神輿位置の表示開始時刻</th><td id="publicSince">—</td></tr>
