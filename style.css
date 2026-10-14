@@ -88,3 +88,5 @@ body{display:flex;flex-direction:column}
 #mapWrap.simulation-active .notice-collapsed{top:48px}
 
 .notice-history-panel .notice-head strong{font-size:17px}
+
+#status.connection-error{background:#fff1e8;color:#812e1d;font-weight:700}

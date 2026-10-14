@@ -69,3 +69,9 @@ textarea{width:100%;resize:vertical;font:inherit;font-size:16px;line-height:1.55
   opacity:1;
   filter:none;
 }
+
+.admin-notice-history{margin-top:11px;padding:10px 11px;border:1px solid #ddd;border-radius:8px;font-size:13px;line-height:1.65;background:#fafafa}
+.admin-notice-item{margin-top:8px;padding-top:8px;border-top:1px solid #ddd;overflow-wrap:anywhere}
+.admin-notice-item .muted{font-size:11px;margin-bottom:3px}
+#noticeEditBtn{margin-top:8px}
+.connection-info{margin-top:7px;font-size:11px}

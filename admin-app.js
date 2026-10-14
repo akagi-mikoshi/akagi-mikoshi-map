@@ -1,11 +1,10 @@
 (() => {
-  const VERSION = '16';
+  const VERSION = '17';
   let token = sessionStorage.getItem('mikoshiAdminToken') || '';
   let busy = false;
   let currentPublicState = false;
   let lastAdminState = null;
   let seq = 0;
-  let noticeEditorDirty = false;
 
   function loadCss(url) {
     return new Promise((resolve, reject) => {
@@ -53,7 +52,7 @@
     document.body.innerHTML = `
       <div class="wrap">
         <div class="card">
-          <div class="title-row"><h1>赤城神社 神輿位置 管理</h1><span class="version-badge">RC3-D2.4</span></div>
+          <div class="title-row"><h1>赤城神社 神輿位置 管理</h1><span class="version-badge">RC3-D2.5</span></div>
           <div id="loginBox">
             <label for="password">管理用パスワード</label>
             <input id="password" type="password" autocomplete="current-password">
@@ -68,6 +67,7 @@
             <div id="stateInfo" class="info state-info"></div>
             <div id="recordingStatus" class="recording-status"></div>
             <div id="mainMessage"></div>
+            <div id="adminConnectionInfo" class="muted connection-info">サーバー通信：確認中</div>
           </div>
         </div>
 
@@ -107,6 +107,8 @@
               <button id="noticeClearBtn" class="outline">お知らせの表示を終了（履歴も消去）</button>
             </div>
             <div id="currentNotice" class="current-notice">現在表示中のお知らせ：なし</div>
+            <button id="noticeEditBtn" class="small-btn hidden" type="button">現在のお知らせを編集する</button>
+            <div id="adminNoticeHistory" class="admin-notice-history"></div>
           </div>
 
           <div class="card">
@@ -200,10 +202,8 @@
         'clearHistory'
       );
 
-    document.getElementById('noticeText').addEventListener('input', () => {
-      noticeEditorDirty = true;
-      updateNoticeCount_();
-    });
+    document.getElementById('noticeText').addEventListener('input', updateNoticeCount_);
+    document.getElementById('noticeEditBtn').onclick = editCurrentNotice_;
 
     document.getElementById('noticeSetBtn').onclick = setNotice_;
     document.getElementById('noticeClearBtn').onclick = clearNotice_;
@@ -353,12 +353,21 @@
       const r = await callAdmin(action);
       if (!r.ok) {
         if (r.error === 'session_expired') return expired();
-        throw new Error('failed');
+        const known = {
+          already_running: '別の画面ですでに巡行またはシミュレーションが開始されています。現在の状態を再確認してください。',
+          not_real_running: '現在は本番の巡行中ではありません。状態を再確認してください。',
+          running_cannot_clear_history: '巡行またはシミュレーション中は位置履歴を消去できません。'
+        };
+        if (known[r.error]) {
+          mainMessage(known[r.error], true);
+          return;
+        }
+        throw new Error(r.error || 'failed');
       }
       if (r.state) updateState(r.state);
       mainMessage(okText, false, true);
     } catch (e) {
-      mainMessage('処理に失敗しました。通信状態を確認してもう一度お試しください。', true);
+      mainMessage('操作結果を確認できません。再度押す前に「現在の状態を再確認」で巡行状態を確認してください。', true);
     } finally { setBusy(false); }
   }
 
@@ -372,7 +381,7 @@
         throw new Error('failed');
       }
       updateState(r.state); mainMessage('状態を更新しました。', false, true);
-    } catch (e) { mainMessage('状態を取得できませんでした。', true); }
+    } catch (e) { mainMessage('GASから状態を取得できません。通信・Googleアカウントの再認証・GASのデプロイを確認してください。', true); }
     finally { setBusy(false); }
   }
 
@@ -391,6 +400,8 @@
 
   function updateState(state) {
     lastAdminState = state;
+    const ci = document.getElementById('adminConnectionInfo');
+    if (ci) ci.textContent = 'GAS通信：正常（' + jpTime(new Date().toISOString()) + '）／Backend ' + (state.backendVersion || '不明');
     currentPublicState = !!state.isPublic;
 
     const s = document.getElementById('publicStatus');
@@ -540,117 +551,148 @@
   function updateNoticeState_(notice, historyCount) {
     const current = document.getElementById('currentNotice');
     const clearBtn = document.getElementById('noticeClearBtn');
-    const box = document.getElementById('noticeText');
-
+    const editBtn = document.getElementById('noticeEditBtn');
+    const list = document.getElementById('adminNoticeHistory');
     if (!current) return;
 
     if (notice && notice.text) {
       current.innerHTML =
-        '<strong>現在表示中：</strong>' +
-        esc(notice.text) +
-        '<br><span class="muted">更新 ' +
-        esc(jpTime(notice.updatedAt)) +
-        ' / ' +
-        (notice.level === 'important' ? '重要' : '通常') +
-        '</span><br><span class="muted">お知らせ履歴：' +
-        Number(historyCount || 0) +
-        '件（最新3件まで）</span>';
-
-      if (clearBtn) clearBtn.disabled = busy;
-
-      if (box && !noticeEditorDirty) {
-        box.value = notice.text;
-        const radio = document.querySelector(
-          'input[name="noticeLevel"][value="' +
-          (notice.level === 'important' ? 'important' : 'normal') +
-          '"]'
-        );
-        if (radio) radio.checked = true;
-        updateNoticeCount_();
-      }
+        '<strong>現在表示中：</strong>' + esc(notice.text) +
+        '<br><span class="muted">更新 ' + esc(jpTime(notice.updatedAt)) +
+        ' / ' + (notice.level === 'important' ? '重要' : '通常') + '</span>';
     } else {
-      current.textContent = '現在表示中のお知らせ：なし（履歴 ' + Number(historyCount || 0) + '件）';
-      if (clearBtn) clearBtn.disabled = true;
-
-      if (box && !noticeEditorDirty) {
-        box.value = '';
-        const normal = document.querySelector(
-          'input[name="noticeLevel"][value="normal"]'
-        );
-        if (normal) normal.checked = true;
-        updateNoticeCount_();
-      }
+      current.textContent = '現在表示中のお知らせ：なし';
     }
+    if (clearBtn) clearBtn.disabled = busy || !(notice || historyCount);
+    if (editBtn) editBtn.classList.toggle('hidden', !(notice && notice.text));
+
+    // 入力欄にはサーバーの本文を自動的に戻さない。
+    // これにより、送信後は空欄になり、入力途中の文章も保護できる。
+    const history = lastAdminState && Array.isArray(lastAdminState.noticeHistory)
+      ? lastAdminState.noticeHistory.slice(0, 3)
+      : [];
+    if (list) {
+      list.innerHTML = '';
+      const title = document.createElement('strong');
+      title.textContent = '保存中のお知らせ履歴：' + history.length + '件／最大3件';
+      list.appendChild(title);
+      history.forEach((item, i) => {
+        const row = document.createElement('div');
+        row.className = 'admin-notice-item';
+        const meta = document.createElement('div');
+        meta.className = 'muted';
+        meta.textContent = (i === 0 ? '最新　' : '') +
+          jpTime(item.updatedAt) + (item.level === 'important' ? '　重要' : '');
+        const body = document.createElement('div');
+        body.textContent = item.text;
+        row.append(meta, body);
+        list.appendChild(row);
+      });
+    }
+  }
+
+  function editCurrentNotice_() {
+    const notice = lastAdminState && lastAdminState.notice;
+    if (!notice || !notice.text) return;
+    const box = document.getElementById('noticeText');
+    if (box.value.trim() && box.value.trim() !== notice.text &&
+        !confirm('入力中の文章を現在のお知らせで置き換えます。よろしいですか？')) {
+      return;
+    }
+    box.value = notice.text;
+    const level = document.querySelector('input[name="noticeLevel"][value="' +
+      (notice.level === 'important' ? 'important' : 'normal') + '"]');
+    if (level) level.checked = true;
+    updateNoticeCount_();
+    box.focus();
   }
 
   async function setNotice_() {
     if (busy || !token) return;
-
     const box = document.getElementById('noticeText');
-    const text = box.value.trim();
-
+    // GAS側と同じ空白文字の正規化。改行入力でも照合結果がずれない。
+    const text = box.value.replace(/\s+/g, ' ').trim().slice(0, 160);
     if (!text) {
       mainMessage('お知らせの本文を入力してください。', true);
       box.focus();
       return;
     }
-
-    const level =
-      document.querySelector('input[name="noticeLevel"]:checked')?.value ||
-      'normal';
-
+    const level = document.querySelector('input[name="noticeLevel"]:checked')?.value || 'normal';
+    const beforeId = lastAdminState && lastAdminState.notice
+      ? lastAdminState.notice.id : null;
     setBusy(true);
-    mainMessage('お知らせを更新しています…');
-
+    mainMessage('お知らせを送信しています…');
+    let confirmed = false;
     try {
-      const r = await callAdmin(
-        'noticeSet',
-        {
-          noticeText: text,
-          noticeLevel: level
-        }
-      );
-
+      const r = await callAdmin('noticeSet', {noticeText:text, noticeLevel:level});
       if (!r.ok) {
         if (r.error === 'session_expired') return expired();
         throw new Error(r.error || 'failed');
       }
-
-      noticeEditorDirty = false;
-      updateState(r.state);
-      mainMessage('一般向け地図のお知らせを更新しました。', false, true);
+      if (r.state) updateState(r.state);
+      confirmed = !!(r.state && r.state.notice && r.state.notice.text === text &&
+        r.state.notice.level === level);
+      if (!confirmed) confirmed = await verifyNoticeState_('set', text, level, beforeId);
     } catch (e) {
-      mainMessage('お知らせを更新できませんでした。', true);
+      confirmed = await verifyNoticeState_('set', text, level, beforeId);
     } finally {
+      if (confirmed) {
+        box.value = '';
+        const normal = document.querySelector('input[name="noticeLevel"][value="normal"]');
+        if (normal) normal.checked = true;
+        updateNoticeCount_();
+        mainMessage('お知らせを送信し、保存内容を確認しました。入力欄は空にしました。', false, true);
+      } else {
+        mainMessage('送信結果を確認できません。文章は残しています。連続して再送せず、「現在の状態を再確認」で保存状況を確認してください。', true);
+      }
       setBusy(false);
     }
   }
 
   async function clearNotice_() {
     if (busy || !token) return;
-
     if (!confirm('一般向け地図から現在のお知らせと直近3件の履歴を消去します。よろしいですか？')) {
       return;
     }
-
     setBusy(true);
     mainMessage('一般向け地図のお知らせと履歴を消去しています…');
-
+    let confirmed = false;
     try {
       const r = await callAdmin('noticeClear');
-
       if (!r.ok) {
         if (r.error === 'session_expired') return expired();
-        throw new Error('failed');
+        throw new Error(r.error || 'failed');
       }
-
-      noticeEditorDirty = false;
-      updateState(r.state);
-      mainMessage('一般向け地図のお知らせと履歴を消去しました。', false, true);
+      if (r.state) updateState(r.state);
+      confirmed = !!(r.state && !r.state.notice &&
+        Number(r.state.noticeHistoryCount || 0) === 0);
+      if (!confirmed) confirmed = await verifyNoticeState_('clear');
     } catch (e) {
-      mainMessage('お知らせと履歴を消去できませんでした。', true);
+      confirmed = await verifyNoticeState_('clear');
     } finally {
+      if (confirmed) {
+        mainMessage('現在のお知らせと履歴が0件になったことを確認しました。', false, true);
+      } else {
+        mainMessage('消去の完了を確認できません。再度押す前に「現在の状態を再確認」で確認してください。', true);
+      }
       setBusy(false);
+    }
+  }
+
+  async function verifyNoticeState_(kind, text, level, beforeId) {
+    // 元の要求がタイムアウトしても、GAS側は完了している可能性がある。
+    // むやみに再送せず、現在のサーバー状態を一度読み直す。
+    try {
+      const r = await callAdmin('status');
+      if (!r.ok || !r.state) return false;
+      updateState(r.state);
+      const n = r.state.notice;
+      if (kind === 'clear') {
+        return !n && Number(r.state.noticeHistoryCount || 0) === 0;
+      }
+      return !!(n && n.id !== beforeId && n.text === text && n.level === level);
+    } catch (e) {
+      return false;
     }
   }
 
@@ -709,14 +751,14 @@
   }
 
   function callAdmin(action, params={}) {
-    return jsonp({ mode:'admin', action, token, ...params });
+    return jsonp({ mode:'admin', action, token, ...params }, action === 'status' ? 12000 : 18000);
   }
 
-  function jsonp(params) {
+  function jsonp(params, timeoutMs=12000) {
     return new Promise((resolve, reject) => {
       const cb = '__mikoshiAdmin_' + Date.now() + '_' + (++seq);
       let script = document.createElement('script');
-      const timer = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 10000);
+      const timer = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, timeoutMs);
       function cleanup() {
         clearTimeout(timer);
         if (script.parentNode) script.parentNode.removeChild(script);

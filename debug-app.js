@@ -1,6 +1,6 @@
 (() => {
-  const VERSION = '6';
-  const SYSTEM_VERSION = 'RC3-D2.4';
+  const VERSION = '7';
+  const SYSTEM_VERSION = 'RC3-D2.5';
   const LEAFLET_CSS =
     'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
   const LEAFLET_JS =
@@ -18,6 +18,7 @@
   let historyLayer = null;
   let lastDebug = null;
   let lastLatency = null;
+  let refreshing = false;
 
   function loadCss(url) {
     return new Promise((resolve, reject) => {
@@ -168,9 +169,9 @@
             <table class="kv">
               <tr><th>システムバージョン</th><td>${SYSTEM_VERSION}</td></tr>
               <tr><th>Backend</th><td id="backendVersion">—</td></tr>
-              <tr><th>公開地図</th><td>app v13</td></tr>
-              <tr><th>管理画面</th><td>admin v16</td></tr>
-              <tr><th>診断画面</th><td>debug v6</td></tr>
+              <tr><th>公開地図</th><td>app v14</td></tr>
+              <tr><th>管理画面</th><td>admin v17</td></tr>
+              <tr><th>診断画面</th><td>debug v7</td></tr>
               <tr><th>シミュレーション</th><td>simulator v12</td></tr>
               <tr><th>巡行ルート・予定データ</th><td><span id="routeDataInfo">—</span> <button class="inline-info" data-info="routeData">ⓘ</button></td></tr>
               <tr><th>サーバー時刻</th><td id="serverTime">—</td></tr>
@@ -408,8 +409,8 @@
   }
 
   async function refreshOnce() {
-    if (!token) return;
-
+    if (!token || refreshing) return;
+    refreshing = true;
     const started = performance.now();
 
     try {
@@ -433,6 +434,8 @@
       setValue('apiStatus', '取得失敗', 'bad');
       setText('diagReceive', '確認できません', 'bad');
       setText('diagReflect', '確認できません', 'bad');
+    } finally {
+      refreshing = false;
     }
   }
 

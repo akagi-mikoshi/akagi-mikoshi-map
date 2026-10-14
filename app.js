@@ -1,12 +1,12 @@
 (() => {
-  const VERSION = '13';
+  const VERSION = '14';
   const LEAFLET_CSS = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
   const LEAFLET_JS  = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
   const MIKOSHI_IMAGE = './mikoshi_marker.png?v=' + VERSION;
   const TEST_MODE =
     new URLSearchParams(window.location.search).get('test') === '1';
   const POLL_INTERVAL_MS = TEST_MODE ? 2000 : 15000;
-  const SYSTEM_VERSION = 'RC3-D2.4';
+  const SYSTEM_VERSION = 'RC3-D2.5';
   let currentNoticeId = null;
   let currentNoticeHistory = [];
 
@@ -17,6 +17,12 @@
   let pollTimer = null;
   let activeJsonpScript = null;
   let responseTimer = null;
+  let requestSequence = 0;
+  let activeCallbackName = null;
+  let requestInFlight = false;
+  let consecutiveFailures = 0;
+  let lastSuccessfulResponseAt = null;
+  let lastGoodState = null;
   let plannedRouteGroup = null;
   let routeBounds = null;
   let routeVisible = true;
@@ -66,7 +72,7 @@
           '</div>' +
         '</div>' +
         '<div id="noticeHistoryPanel" class="notice-history-panel hidden">' +
-          '<div class="notice-head"><strong>お知らせ履歴</strong><button id="noticeHistoryClose" type="button" aria-label="閉じる">×</button></div>' +
+          '<div class="notice-head"><strong>お知らせ履歴（最大3件）</strong><button id="noticeHistoryClose" type="button" aria-label="閉じる">×</button></div>' +
           '<div id="noticeHistoryList"></div>' +
         '</div>' +
         '<button id="noticeCollapsed" class="notice-collapsed hidden" type="button" aria-label="お知らせ履歴を表示">お知らせ</button>' +
@@ -775,17 +781,19 @@
     });
   }
 
-  window.receiveMikoshiData = function(state) {
+  function finishPublicRequest_(callbackName) {
     clearResponseTimer();
-
     if (activeJsonpScript && activeJsonpScript.parentNode) {
       activeJsonpScript.parentNode.removeChild(activeJsonpScript);
     }
     activeJsonpScript = null;
-
-    showState(state);
-    scheduleNext();
-  };
+    if (callbackName) {
+      try { delete window[callbackName]; }
+      catch (e) { window[callbackName] = undefined; }
+    }
+    activeCallbackName = null;
+    requestInFlight = false;
+  }
 
   function clearResponseTimer() {
     if (responseTimer) {
@@ -794,45 +802,75 @@
     }
   }
 
-  function scheduleNext() {
+  function scheduleNext(delayMs = POLL_INTERVAL_MS) {
     if (pollTimer) clearTimeout(pollTimer);
-    pollTimer = setTimeout(loadPublicState, POLL_INTERVAL_MS);
+    pollTimer = setTimeout(loadPublicState, delayMs);
+  }
+
+  function publicRequestFailed_(callbackName) {
+    if (!requestInFlight || activeCallbackName !== callbackName) return;
+    finishPublicRequest_(callbackName);
+    consecutiveFailures += 1;
+    if (consecutiveFailures >= 2) {
+      const last = lastSuccessfulResponseAt
+        ? new Date(lastSuccessfulResponseAt).toLocaleTimeString('ja-JP',
+            {timeZone:'Asia/Tokyo',hour:'2-digit',minute:'2-digit'})
+        : null;
+      document.getElementById('status').textContent =
+        last
+          ? '⚠ 最新情報を取得できません。最終正常取得 ' + last +
+            '（地図上の位置はその時点の情報です）。再接続を試みています。'
+          : '⚠ 位置情報サービスと通信できません。予定経路は確認できます。再接続を試みています。';
+      document.getElementById('status').classList.add('connection-error');
+    } else if (!lastGoodState) {
+      document.getElementById('status').textContent = '位置情報を確認しています…';
+    }
+    // 失敗時は短い間隔で再試行するが、重複リクエストを生成しない。
+    scheduleNext(Math.min(30000, 3000 * Math.pow(2, Math.min(consecutiveFailures - 1, 3))));
   }
 
   function loadPublicState() {
+    if (requestInFlight) return;
+    if (pollTimer) {
+      clearTimeout(pollTimer);
+      pollTimer = null;
+    }
     const API_URL = window.MIKOSHI_API_URL || '';
-
     if (!API_URL || !API_URL.endsWith('/exec')) {
-      document.getElementById('status').textContent = '位置情報APIが設定されていません。';
+      document.getElementById('status').textContent = '⚠ 位置情報サービスの設定を確認してください。';
+      document.getElementById('status').classList.add('connection-error');
       return;
     }
 
-    if (activeJsonpScript && activeJsonpScript.parentNode) {
-      activeJsonpScript.parentNode.removeChild(activeJsonpScript);
-    }
+    const id = ++requestSequence;
+    const callbackName = '__mikoshiPublic_' + id;
+    const script = document.createElement('script');
+    requestInFlight = true;
+    activeCallbackName = callbackName;
+    activeJsonpScript = script;
 
-    activeJsonpScript = document.createElement('script');
-    activeJsonpScript.src =
-      API_URL +
-      '?mode=public' +
-      '&callback=receiveMikoshiData' +
-      '&_=' + Date.now();
-
-    activeJsonpScript.onerror = function() {
-      clearResponseTimer();
-      document.getElementById('status').textContent =
-        '神輿の現在位置：通信を確認しています…';
-      setTimeout(loadPublicState, 2000);
+    window[callbackName] = state => {
+      if (activeCallbackName !== callbackName || !requestInFlight) return;
+      finishPublicRequest_(callbackName);
+      if (!state || typeof state.isPublic !== 'boolean') {
+        consecutiveFailures += 1;
+        scheduleNext(3000);
+        return;
+      }
+      consecutiveFailures = 0;
+      lastSuccessfulResponseAt = Date.now();
+      lastGoodState = state;
+      document.getElementById('status').classList.remove('connection-error');
+      showState(state);
+      scheduleNext();
     };
 
-    document.body.appendChild(activeJsonpScript);
-
+    script.src = API_URL + '?mode=public&callback=' + callbackName + '&_=' + Date.now();
+    script.async = true;
+    script.onerror = () => publicRequestFailed_(callbackName);
+    document.body.appendChild(script);
     clearResponseTimer();
-    responseTimer = setTimeout(function() {
-      document.getElementById('status').textContent =
-        '神輿の現在位置：通信を確認しています…';
-      loadPublicState();
-    }, 8000);
+    responseTimer = setTimeout(() => publicRequestFailed_(callbackName), 10000);
   }
 
   function showState(state) {
@@ -1208,8 +1246,14 @@
   }
 
   function refreshImmediately() {
-    if (pollTimer) clearTimeout(pollTimer);
-    clearResponseTimer();
+    if (pollTimer) {
+      clearTimeout(pollTimer);
+      pollTimer = null;
+    }
+    if (requestInFlight) {
+      // 既存リクエストを待つ。タイムアウト後に自動再試行する。
+      return;
+    }
     loadPublicState();
   }
 
