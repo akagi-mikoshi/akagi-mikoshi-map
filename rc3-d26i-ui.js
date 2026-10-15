@@ -203,6 +203,12 @@
     // 数字は「保存中の履歴件数」。既存の履歴ボタンのクリック処理を再利用。
     // ベルからはポップアップの表示・非表示にかかわらず履歴を開く。
     if (historyList && historyList.querySelector('.notice-history-item') && collapsed) {
+      // お知らせがポップアップ中なら、既存の「閉じる」の処理で既読扱いにする。
+      // これにより履歴を閉じた後に同じ通知が再ポップアップしない。
+      if (dock && !dock.classList.contains('hidden')) {
+        var closeCurrent = document.getElementById('noticeClose');
+        if (closeCurrent) closeCurrent.click();
+      }
       collapsed.click();
       return;
     }
