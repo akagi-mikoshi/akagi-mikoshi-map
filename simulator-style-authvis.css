@@ -54,7 +54,7 @@ select:disabled{opacity:1;color:#222;-webkit-text-fill-color:#222;background:#f2
 .observer-note{font-size:12px;line-height:1.65;margin-top:10px;color:#3c5870}
 
 .title-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.version-badge{display:inline-block;white-space:nowrap;border-radius:999px;background:#fff1cd;color:#74530a;padding:4px 8px;font-size:11px;font-weight:bold}
+.version-badge{display:inline-block;white-space:nowrap;border-radius:999px;background:#eee;color:#555;padding:4px 8px;font-size:11px;font-weight:bold}
 
 /* ログイン時に入力文字を確認するための表示・非表示切替 */
 #loginBox .password-visibility{display:flex;align-items:center;gap:8px;cursor:pointer;margin:8px 0 12px;
