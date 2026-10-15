@@ -1,6 +1,7 @@
 (() => {
   const VERSION = '8';
   const SYSTEM_VERSION = 'RC3-D2.5';
+  const PUBLIC_RELEASE = 'RC3-D2.6j';
   const LEAFLET_CSS =
     'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
   const LEAFLET_JS =
@@ -76,7 +77,7 @@
         <div class="card">
           <div class="title-row">
             <h1>赤城神社 神輿位置 診断</h1>
-            <span class="version-badge">診断 v8</span>
+            <span class="version-badge">${PUBLIC_RELEASE}</span>
           </div>
           <div class="muted">
             診断・確認用の画面です。神輿の巡行状態や一般向け地図の表示状態は変更しません。
@@ -167,12 +168,13 @@
           <div class="card">
             <h2>システム情報</h2>
             <table class="kv">
-              <tr><th>システムバージョン</th><td>${SYSTEM_VERSION}</td></tr>
+              <tr><th>公開版（全画面共通）</th><td>${PUBLIC_RELEASE}</td></tr>
+              <tr><th>基本処理版（位置情報・通信）</th><td>${SYSTEM_VERSION}</td></tr>
               <tr><th>Backend</th><td id="backendVersion">—</td></tr>
-              <tr><th>公開地図</th><td>RC3-D2.6j（表示）／app v14（地図処理）</td></tr>
-              <tr><th>管理画面</th><td>admin v19</td></tr>
-              <tr><th>診断画面</th><td>debug v8</td></tr>
-              <tr><th>シミュレーション</th><td>S1／simulator v19</td></tr>
+              <tr><th>地図表示（内部）</th><td>app v14</td></tr>
+              <tr><th>管理画面（内部）</th><td>admin v20</td></tr>
+              <tr><th>診断画面（内部）</th><td>debug v8</td></tr>
+              <tr><th>シミュレーション（内部）</th><td>simulator v19／通信安定化S1</td></tr>
               <tr><th>巡行ルート・予定データ</th><td><span id="routeDataInfo">—</span> <button class="inline-info" data-info="routeData">ⓘ</button></td></tr>
               <tr><th>サーバー時刻</th><td id="serverTime">—</td></tr>
               <tr><th>神輿位置の表示開始時刻</th><td id="publicSince">—</td></tr>
@@ -903,7 +905,8 @@
 
     const lines = [
       '赤城神社 神輿位置 診断',
-      'システム: ' + SYSTEM_VERSION,
+      '公開版: ' + PUBLIC_RELEASE,
+      '基本処理版: ' + SYSTEM_VERSION,
       'Backend: ' + (lastDebug.backendVersion || '—'),
       '巡行ルート・予定データ: ' +
         (meta ? (meta.dataVersion || '—') + ' / ' + (meta.updatedAt || '—') : '—'),
