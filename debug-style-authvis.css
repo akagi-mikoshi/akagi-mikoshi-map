@@ -65,4 +65,4 @@ button{width:100%;min-height:44px;margin-top:10px;border:0;border-radius:8px;fon
 #loginBox .password-visibility{display:flex;align-items:center;gap:8px;cursor:pointer;margin:8px 0 12px;
   font-size:14px;font-weight:normal;color:#444;line-height:1.4}
 #loginBox .password-visibility input[type=checkbox]{width:19px;height:19px;flex:0 0 19px;margin:0;accent-color:#8A2D24}
-#loginBox .password-visibility:focus-within{outline:2px solid #8A2D24;outline-offset:3px}
+/* Native checkbox keyboard focus indicator remains; no outline around the full label. */
