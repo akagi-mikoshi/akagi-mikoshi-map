@@ -13,7 +13,7 @@
   }
 
   async function boot() {
-    await loadCss('./manual-style.css?v=' + VERSION);
+    await loadCss('./manual-style-authvis.css?v=' + VERSION);
 
     document.body.innerHTML = `
       <div class="wrap">
