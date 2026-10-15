@@ -272,6 +272,13 @@
       }
       info.textContent = 'サーバーから認証状態を確認できません。ログイン情報は保持しています。通信回復後に自動で再接続します。';
     } catch (e) {
+      // シミュレーション画面では共通APIが期限切れ時に例外を投げる。
+      if (e && e.message === 'session_expired') {
+        clearSession();
+        hideResume();
+        showLogin();
+        return;
+      }
       if (token !== attemptedToken) return;
       info.textContent = 'サーバーから応答を取得できません。ログイン情報は保持しています。通信回復後に自動で再接続します。';
     } finally {
