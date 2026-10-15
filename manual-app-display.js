@@ -20,7 +20,7 @@
         <div class="card">
           <div class="title-row">
             <h1>当日操作マニュアル</h1>
-            <span class="version-badge">2026-10-15版</span>
+            <span class="version-badge">RC3-D2.6j</span>
           </div>
           <p>赤城神社例大祭　神輿現在地案内システム</p>
           <div class="notice">
