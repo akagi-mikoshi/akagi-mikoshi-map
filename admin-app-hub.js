@@ -52,7 +52,7 @@
     document.body.innerHTML = `
       <div class="wrap">
         <div class="card">
-          <div class="title-row"><h1>赤城神社 神輿位置 管理</h1><span class="version-badge">管理 v20</span></div>
+          <div class="title-row"><h1>赤城神社 神輿位置 管理</h1><span class="version-badge">RC3-D2.6j</span></div>
           <div id="loginBox">
             <label for="password">管理用パスワード</label>
             <input id="password" type="password" autocomplete="current-password">
