@@ -264,7 +264,7 @@
         '<p><strong>流山・赤城神社例大祭｜神輿巡行マップ</strong></p>' +
         '<p>2026年10月18日（日）の神輿巡行について、現在地・巡行予定・お知らせをご案内するページです。</p>' +
         '<p>祭礼案内：<a href="https://sites.google.com/view/syuku26/%E8%B5%A4%E5%9F%8E%E7%A5%9E%E7%A4%BE%E4%BE%8B%E5%A4%A7%E7%A5%AD" target="_blank" rel="noopener noreferrer">赤城神社例大祭の案内ページ（別画面）</a></p>' +
-        '<p>バージョン：' + APP_VERSION + '<br>地図・通信処理：RC3-D2.5を継続利用</p>');
+        '<p>公開版（全画面共通）：' + APP_VERSION + '<br>基本処理版（位置情報・通信）：RC3-D2.5</p>');
       return;
     }
   }
