@@ -96,4 +96,4 @@ textarea{width:100%;resize:vertical;font:inherit;font-size:16px;line-height:1.55
 /* 管理画面：必要なときにのみパスワードを目視確認する */
 .password-visibility{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:normal;color:#444;margin:-2px 0 12px;line-height:1.4}
 .password-visibility input[type=checkbox]{width:19px;height:19px;flex:0 0 19px;margin:0;accent-color:#8A2D24}
-.password-visibility:focus-within{outline:2px solid #8A2D24;outline-offset:3px}
+/* Native checkbox keyboard focus indicator remains; no outline around the full label. */
