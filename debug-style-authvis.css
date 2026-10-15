@@ -7,7 +7,7 @@ body{padding:12px}
 .title-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
 h1{font-size:22px;margin:0 0 10px}
 h2{font-size:17px;margin:0 0 10px}
-.version-badge{display:inline-block;white-space:nowrap;border-radius:999px;background:#e8eef4;color:#3d5870;padding:4px 8px;font-size:11px;font-weight:bold}
+.version-badge{display:inline-block;white-space:nowrap;border-radius:999px;background:#eee;color:#555;padding:4px 8px;font-size:11px;font-weight:bold}
 label{display:block;font-size:13px;font-weight:bold;margin-bottom:6px}
 input{width:100%;font-size:18px;padding:12px;border:1px solid #aaa;border-radius:8px}
 button{width:100%;min-height:44px;margin-top:10px;border:0;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer}
