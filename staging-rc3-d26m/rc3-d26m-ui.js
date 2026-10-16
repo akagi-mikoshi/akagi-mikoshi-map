@@ -184,6 +184,7 @@
     '<div class="d26-menu-list">',
     '<button type="button" data-d26-action="notice">お知らせ <span>›</span></button>',
     '<button type="button" data-d26-action="schedule">巡行地点・予定時刻一覧 <span>›</span></button>',
+    '<button type="button" data-d26-action="audit">【検証用】区間別の通過判定 <span>›</span></button>',
     '<button type="button" data-d26-action="fit">巡行ルート全体を地図表示 <span>›</span></button>',
     '<button type="button" data-d26-action="schedule-info">予定時刻の注意点 <span>›</span></button>',
     '<button type="button" data-d26-action="update">自動更新について <span>›</span></button>',
@@ -223,6 +224,25 @@
     if (action === 'close') { closeDialog(); return; }
     if (action === 'menu') { showMenu(); return; }
     if (action === 'notice') { showNotice(); return; }
+    if (action === 'audit') {
+      var audit = window.MIKOSHI_STAGING_AUDIT;
+      if (!audit || !Array.isArray(audit.sections)) {
+        openDialog('区間別の通過判定【検証用】', '<p>判定情報をまだ取得していません。</p>');
+        return;
+      }
+      var html = '<p>地図上の通過済み経路に使用している判定を、区間別に表示します。</p>';
+      html += '<p><strong>判定進捗：' + (audit.progressMeters === null ? '未受信' : Math.round(audit.progressMeters) + 'm / ' + Math.round(audit.totalMeters) + 'm') + '</strong></p>';
+      html += '<p>経路記録：' + Math.round(audit.trailPointCount) + '点</p>';
+      audit.sections.forEach(function (s) {
+        var pct = s.progressMeters === null || s.lengthMeters <= 0 ? '未受信'
+          : Math.round(100 * s.progressMeters / s.lengthMeters) + '%';
+        var distance = s.progressMeters === null ? '—' : Math.round(s.progressMeters) + 'm';
+        html += '<p><strong>第' + Number(s.id) + '区間：</strong>' + distance + ' / ' + Math.round(s.lengthMeters) + 'm （' + pct + '）</p>';
+      });
+      html += '<p>※この数値は現在の表示用アルゴリズムの判定です。GPSの実際の通過を証明するものではありません。シミュレーション停止・初期化後は記録が消えます。</p>';
+      openDialog('区間別の通過判定【検証用】', html);
+      return;
+    }
     if (action === 'schedule') {
       closeDialog();
       var scheduleButton = document.getElementById('scheduleButton');
