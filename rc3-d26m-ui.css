@@ -1,0 +1,128 @@
+/* RC3-D2.6m staging: production CSS remains unchanged. */
+.d26-enabled { color:#252321; }
+.d26-enabled #mapWrap { min-height:140px; overflow:hidden; }
+.d26-enabled #note, .d26-enabled #updateInfo { display:none!important; }
+.d26-enabled #status { padding:5px 12px 4px; font-size:12px; line-height:1.45; color:#4e4b48; border-top:1px solid #ebe6df; }
+.d26-enabled #status.connection-error { color:#812e1d; }
+.d26-header { box-sizing:border-box; flex:0 0 auto; width:100%; min-height:66px; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 10px 8px 14px; background:#fff; border-bottom:1px solid #e6ded7; box-shadow:0 1px 3px rgba(0,0,0,.04); z-index:1000; }
+.d26-titles { flex:1 1 auto; min-width:0; }
+.d26-title { margin:0 0 3px; color:#64251c; font-weight:800; font-size:clamp(18px,5vw,23px); line-height:1.2; white-space:nowrap; letter-spacing:.01em; }
+.d26-subtitle { color:#49443f; font-size:clamp(11.5px,3.2vw,13px); font-weight:600; line-height:1.35; white-space:nowrap; }
+.d26-header-actions { display:flex; align-items:center; gap:2px; flex:0 0 auto; }
+.d26-icon-button { position:relative; display:flex; align-items:center; justify-content:center; width:41px; height:43px; border:0; border-radius:10px; background:transparent; color:#423c38; cursor:pointer; font:26px/1 sans-serif; }
+.d26-icon-button:active, .d26-icon-button:focus-visible { background:#f2ede7; outline:2px solid transparent; }
+.d26-notice-count {box-sizing:border-box;position:absolute;top:1px;right:0;display:flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 3px;border-radius:10px;background:#a9231e;color:#fff;border:1px solid #fff;font:700 10px/1 sans-serif;pointer-events:none;}
+.d26-notice-count[hidden] {display:none!important;}
+/* 下段は自動更新を常時表示し、補足ボタンを低彩度・薄い枠・細めにする。
+ * 外見の高さを抑え、操作対象には十分な当たり判定を確保する。 */
+.d26-footer {box-sizing:border-box;width:100%;flex:0 0 auto;display:flex;
+ align-items:center;justify-content:space-between;gap:7px;min-height:38px;
+ padding:3px 8px calc(3px + env(safe-area-inset-bottom, 0px));
+ background:#fff;border-top:1px solid #e6ded7;}
+.d26-refresh {display:flex;align-items:center;gap:3px;min-width:0;
+ color:#365d45;font:600 12px/1.3 Meiryo,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+.d26-refresh-label {white-space:nowrap;}
+.d26-info-tap {display:inline-flex;align-items:center;justify-content:center;
+ width:28px;height:32px;flex:0 0 28px;border:0;
+ border-radius:6px;background:transparent;color:#6A746F;font:700 17px/1 sans-serif;cursor:pointer;}
+.d26-info-tap:focus-visible {outline:2px solid #94745f;outline-offset:2px;}
+.d26-footer-actions {display:flex;align-items:center;gap:6px;flex:0 0 auto;}
+.d26-footer-actions button {box-sizing:border-box;display:inline-flex;align-items:center;
+ justify-content:center;gap:3px;min-height:30px;padding:3px 7px;
+ border:1px solid #ccc8c2;border-radius:7px;
+ background:#fcfbf9;box-shadow:none;
+ color:#52504c;font:600 12px/1.2 Meiryo,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ white-space:nowrap;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.d26-footer-actions button:active {background:#eeece8;}
+.d26-footer button:focus-visible {outline:2px solid #94745f;outline-offset:2px;}
+@media (max-width:390px) {
+ .d26-footer {gap:5px;padding-left:6px;padding-right:6px;}
+ .d26-footer-actions {gap:5px;}
+ .d26-footer-actions button {padding:3px 6px;font-size:11px;}
+}
+@media (max-width:350px) {
+ .d26-footer {gap:4px;padding-left:4px;padding-right:4px;}
+ .d26-refresh {font-size:11px;gap:2px;}
+ .d26-info-tap {width:26px;flex-basis:26px;}
+ .d26-footer-actions {gap:4px;}
+ .d26-footer-actions button {padding:3px 4px;font-size:10.5px;}
+}
+@media (max-width:320px) {
+ .d26-footer {flex-wrap:wrap;justify-content:center;gap:2px;padding-top:3px;padding-bottom:calc(3px + env(safe-area-inset-bottom,0px));}
+ .d26-refresh {width:100%;justify-content:center;}
+ .d26-footer-actions {flex:1;justify-content:center;}
+ .d26-footer-actions button {flex:1;}
+}
+.d26-modal { box-sizing:border-box; position:fixed; inset:0; z-index:6000; display:flex; align-items:center; justify-content:center; padding:12px; background:rgba(12,18,22,.43); }
+.d26-modal.d26-hidden { display:none; }
+.d26-modal-card { width:min(480px,100%); max-height:calc(100dvh - 36px); display:flex; flex-direction:column; background:#fff; border-radius:15px; box-shadow:0 10px 30px rgba(0,0,0,.23); overflow:hidden; }
+.d26-modal-head { display:flex; flex:0 0 auto; align-items:center; justify-content:space-between; border-bottom:1px solid #eee7dd; padding:12px 14px; }
+.d26-modal-head h2 { margin:0; font-size:17px; color:#542820; }
+.d26-close { width:36px; height:36px; flex:0 0 auto; border:0; background:#f2f0ed; border-radius:50%; font-size:24px; }
+.d26-modal-content { flex:1 1 auto; overflow-y:auto; overscroll-behavior:contain; padding:12px 16px 20px; font-size:14px; line-height:1.8; }
+.d26-modal-content p { margin:0 0 12px; }
+.d26-modal-content a { color:#713427; text-decoration:underline; overflow-wrap:anywhere; }
+.d26-menu-list { display:grid; gap:0; }
+.d26-menu-list button { display:flex; align-items:center; justify-content:space-between; width:100%; min-height:46px; padding:12px 4px; border:0; border-bottom:1px solid #e9e4e0; text-align:left; color:#292521; background:#fff; font-size:15px; font-family:inherit; cursor:pointer; }
+.d26-menu-list button span { color:#8b8179; font-size:22px; }
+.d26-primary { display:block; width:100%; margin-top:12px; min-height:42px; background:#782f24; color:#fff; border:0; border-radius:8px; font-size:14px; font-weight:bold; }
+.d26-enabled #noticeDock { top:82px; }
+.d26-enabled #noticeHistoryPanel { top:82px; max-height:calc(100% - 98px); }
+.d26-enabled #noticeCollapsed { display:none!important; }
+.d26-enabled #mapControlsButton { right:8px; top:10px; }
+.d26-enabled #mapWrap.simulation-active .notice-collapsed { top:52px; }
+@media (max-width:350px) {
+ .d26-header { padding-left:10px; padding-right:4px; }
+ .d26-icon-button { width:35px; }
+ .d26-subtitle { font-size:11.5px; }
+
+}
+@media (max-height:500px) {
+ .d26-header { min-height:53px; padding-top:4px; padding-bottom:4px; }
+ .d26-title { font-size:18px; }
+ .d26-footer { min-height:38px; padding-top:2px; padding-bottom:calc(2px + env(safe-area-inset-bottom,0px)); }
+}
+/* RC3-D2.6k：アイコンの寸法・中央揃え。 */
+.d26-refresh-icon {width:17px;height:17px;min-width:17px;display:block;flex:none;}
+.d26-info-tap svg {width:16px;height:16px;display:block;flex:none;}
+/* 二つの補足ボタンが説明を開くことを示す。ボタン自体の高さ・背景は継承。 */
+.d26-footer-actions button::after {content:'›';font-size:17px;line-height:1;color:#77736e;font-weight:500;margin-left:1px;}
+/* 予定経路の破線は追加CSSで変更しない。
+ * app.jsの従来設定dashArray:'8 7'、lineCap:'round'に戻す。 */
+@media (max-width:350px) {
+  .d26-footer-actions button::after {font-size:15px;margin-left:0;}
+}
+
+/* RC3-D2.6k: 線種はLeafletのポリライン生成時に指定する。
+   SVG要素全体に対するダッシュCSSは使用しない（地点マーカーとの混同防止）。 */
+
+/* RC3-D2.6k: 予定経路だけを描画時に4pxへ細くし、他の線と地点マーカーは変更しない。
+ * 説明ボタンはPC・スマホとも「ラベル ›」の共通表現とする。 */
+
+/* 巡行予定：大きな文字、押せる行の目印、控えめな閉じるボタン。
+   既存のクリック操作と42pxの閉じる領域は変更しない。 */
+.d26-enabled .schedule-head { margin-bottom:8px; padding-bottom:8px; }
+.d26-enabled .schedule-head strong { font-size:18px; line-height:1.35; }
+.d26-enabled #scheduleClose { width:42px; height:42px; flex:0 0 42px; font-size:20px; line-height:1;
+  background:radial-gradient(circle at center,#f2f0ed 0,#f2f0ed 16px,transparent 16.5px);
+  display:flex; align-items:center; justify-content:center; color:#555; cursor:pointer; }
+.d26-enabled .schedule-summary {font-size:13px;line-height:1.65;color:#4e4a46;margin-bottom:8px;}
+.d26-enabled .d26-schedule-legend {font-weight:400;}
+.d26-enabled .d26-schedule-instruction {font-weight:700;color:#393630;margin-top:4px;}
+.d26-enabled .schedule-item {grid-template-columns:92px minmax(0,1fr) 18px;align-items:center;
+  gap:7px; min-height:48px; padding:9px 4px; cursor:pointer; }
+.d26-enabled .schedule-item:active {background:#f5f2ee;}
+.d26-enabled .schedule-item:focus-visible {outline:2px solid #8a6e58;outline-offset:-2px;}
+.d26-enabled .schedule-time {font-size:13px;}
+.d26-enabled .schedule-place {font-size:14px;line-height:1.5;}
+.d26-enabled .schedule-note {font-size:12px;line-height:1.5;}
+.d26-enabled .d26-schedule-chevron {font-size:23px;font-weight:400;line-height:1;color:#938d86;text-align:center;}
+.d26-enabled #fitRouteButton {font-size:14px;line-height:1.5;padding:7px 5px;}
+@media(max-width:360px){.d26-enabled .schedule-item {grid-template-columns:78px minmax(0,1fr) 15px;gap:5px;}
+  .d26-enabled .schedule-time {font-size:12px;}
+}
+
+/* 下段の説明リンクが長くなっても、狭い端末では折り返せるようにする。 */
+@media(max-width:360px){.d26-footer{flex-wrap:wrap;justify-content:center;row-gap:1px}.d26-refresh{justify-content:center}.d26-footer-actions{justify-content:center}}
+
+/* Staging: position notices below Leaflet +/- controls without changing margins or font sizes. */
