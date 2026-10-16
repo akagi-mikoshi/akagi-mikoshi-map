@@ -40,6 +40,8 @@
   let routeVertices = [];
   let routeEdges = [];
   let routeTotalLength = 0;
+  // Staging only: expected boundaries by occurrence along the full route.
+  let stageSegmentBoundaries = [];
 
   const stopMarkers = new Map();
 
@@ -357,6 +359,7 @@
     routeVertices = [];
     routeEdges = [];
     routeTotalLength = 0;
+    stageSegmentBoundaries = [];
 
     if (!data || !Array.isArray(data.segments)) return;
 
@@ -393,6 +396,8 @@
 
         all.push(point);
       });
+      // Each route segment is a separate occurrence, even on the same physical road.
+      stageSegmentBoundaries.push({id: segment.id, endIndex: all.length - 1});
     });
 
     if (all.length < 2) return;
@@ -426,11 +431,33 @@
         progress: routeTotalLength
       });
     }
+    updateStageAudit_(null, 0);
+  }
+
+  function updateStageAudit_(progress, pointCount) {
+    const value = Number.isFinite(progress)
+      ? Math.max(0, Math.min(routeTotalLength, progress)) : null;
+    let prev = 0;
+    const sections = stageSegmentBoundaries.map(section => {
+      const vertex = routeVertices[section.endIndex];
+      const end = vertex ? vertex.progress : prev;
+      const length = Math.max(0, end - prev);
+      const passed = value === null ? null
+        : Math.min(length, Math.max(0, value - prev));
+      const item = { id: section.id, lengthMeters: length, progressMeters: passed };
+      prev = end;
+      return item;
+    });
+    window.MIKOSHI_STAGING_AUDIT = {
+      progressMeters: value, totalMeters: routeTotalLength,
+      trailPointCount: pointCount, sections: sections
+    };
   }
 
   function updateActualTrail(trail) {
     const points = Array.isArray(trail) ? trail : [];
     const progress = findRouteProgress(points);
+    updateStageAudit_(progress, points.length);
 
     if (
       !Number.isFinite(progress) ||
