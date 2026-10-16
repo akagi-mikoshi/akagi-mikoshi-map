@@ -762,11 +762,11 @@
     status.textContent = history.length
       ? '最新の受信から表示しています。受信時刻とGPS測位時刻は異なる場合があります。'
       : 'まだ受信履歴がありません。';
-    for (const event of [...history].reverse()) {
+    for (const event of history) {
       if (!event || typeof event !== 'object') continue;
       const row = document.createElement('tr');
       const received = jpTime(event.receivedAt);
-      const measured = jpTime(event.sourceTimestamp);
+      const measured = gpsTime_(event.sourceTimestamp);
       const accuracy = isFiniteNumber(event.accuracy)
         ? '約' + Math.round(Number(event.accuracy)) + 'm' : '—';
       for (const value of [
@@ -1193,6 +1193,14 @@
         second: '2-digit'
       }
     );
+  }
+
+  function gpsTime_(value) {
+    if (value === null || value === undefined || value === '') return '—';
+    const text = String(value).trim();
+    if (/^\\d{10}$/.test(text)) return jpTime(new Date(Number(text) * 1000).toISOString());
+    if (/^\\d{13}$/.test(text)) return jpTime(new Date(Number(text)).toISOString());
+    return jpTime(text);
   }
 
   function shortTime(value) {
