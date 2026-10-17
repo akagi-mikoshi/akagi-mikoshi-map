@@ -619,7 +619,7 @@
   // 初期サイズの判定がCSS適用前後で変わることを防ぐ。
   var css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = './rc3-d26m-ui.css?v=6-left-hold';
+  css.href = './rc3-d26m-ui.css?v=7-polish3px';
   var domReady = document.readyState !== 'loading';
   var cssReady = false;
   var appStarted = false;
