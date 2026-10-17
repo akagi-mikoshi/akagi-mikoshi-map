@@ -4,7 +4,7 @@
  */
 (function () {
   'use strict';
-  var measurementId = ''; // G-で始まるGA4測定ID。空欄中は計測しない。
+  var measurementId = 'G-GEXE9J0088'; // Google Analytics 4 ウェブデータストリーム測定ID。
   if (!/^G-[A-Z0-9]+$/.test(measurementId)) return;
 
   window.dataLayer = window.dataLayer || [];
