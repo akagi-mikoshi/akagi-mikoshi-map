@@ -148,10 +148,20 @@
     footerActions.appendChild(scheduleInfoButton);
     footerActions.appendChild(guideButton);
     footer.appendChild(footerActions);
+    var pollMeter = el('div', 'd26-poll-meter');
+    pollMeter.id = 'd26-poll-meter';
+    pollMeter.setAttribute('role', 'progressbar');
+    pollMeter.setAttribute('aria-label', '次回の位置情報取得まで');
+    pollMeter.setAttribute('aria-valuemin', '0');
+    pollMeter.setAttribute('aria-valuemax', '100');
+    pollMeter.setAttribute('aria-valuenow', '0');
+    pollMeter.innerHTML = '<span class="d26-poll-meter-fill" id="d26-poll-meter-fill"></span>';
+    footer.appendChild(pollMeter);
     var status = document.getElementById('status');
     // 通信失敗等の状態表示は本体側が更新するため、その直後にボタン列を置く。
     if (status) status.insertAdjacentElement('afterend', footer);
     else mapWrap.insertAdjacentElement('afterend', footer);
+    onPollPhase();
 
     var backdrop = el('div', 'd26-modal d26-hidden');
     backdrop.id = 'd26-modal';
@@ -163,6 +173,55 @@
     document.body.classList.add('d26-enabled');
     updateBellIndicator();
   }
+
+
+  // The bar follows real request timing: next request starts 15 seconds after
+  // completion (2 seconds in test mode), not on a wall-clock 15-second grid.
+  var d26PollTimer = null;
+  function paintPollIndicator() {
+    var meter = document.getElementById('d26-poll-meter');
+    var fill = document.getElementById('d26-poll-meter-fill');
+    var label = document.querySelector('.d26-refresh-label');
+    if (!meter || !fill || !label) return;
+    var state = window.MIKOSHI_POLL_STATUS || {phase:'initial'};
+    var phase = state.phase;
+    var timeLeft = 0;
+    var percent = 0;
+    if (phase === 'waiting' || phase === 'retry') {
+      var delay = Math.max(1, Number(state.delayMs) || 1);
+      timeLeft = Math.max(0, (Number(state.startedAt) || Date.now()) + delay - Date.now());
+      percent = Math.min(100, Math.max(0, 100 * (delay - timeLeft) / delay));
+      label.textContent = phase === 'retry'
+        ? '再試行まで ' + Math.ceil(timeLeft / 1000) + '秒'
+        : '次の取得まで ' + Math.ceil(timeLeft / 1000) + '秒';
+    } else if (phase === 'requesting') {
+      percent = 100;
+      label.textContent = '位置情報を取得中…';
+    } else if (phase === 'paused') {
+      label.textContent = '自動更新：待機中';
+    } else if (phase === 'unavailable') {
+      label.textContent = '位置情報を取得できません';
+    } else {
+      label.textContent = '自動更新：準備中';
+    }
+    fill.style.width = percent.toFixed(1) + '%';
+    meter.classList.toggle('d26-poll-requesting', phase === 'requesting');
+    meter.classList.toggle('d26-poll-retry', phase === 'retry');
+    meter.setAttribute('aria-valuenow', String(Math.round(percent)));
+    meter.setAttribute('aria-valuetext', label.textContent);
+  }
+  function onPollPhase() {
+    if (d26PollTimer) {
+      clearInterval(d26PollTimer);
+      d26PollTimer = null;
+    }
+    paintPollIndicator();
+    var state = window.MIKOSHI_POLL_STATUS;
+    if (state && (state.phase === 'waiting' || state.phase === 'retry')) {
+      d26PollTimer = setInterval(paintPollIndicator, 250);
+    }
+  }
+  window.addEventListener('mikoshi-poll-status', onPollPhase);
 
   var lastFocused = null;
   function closeDialog() {
@@ -486,7 +545,7 @@
   // 初期サイズの判定がCSS適用前後で変わることを防ぐ。
   var css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = './rc3-d26m-ui.css?v=3-qr1';
+  css.href = './rc3-d26m-ui.css?v=4-pollbar1';
   var domReady = document.readyState !== 'loading';
   var cssReady = false;
   var appStarted = false;
@@ -494,7 +553,7 @@
     if (!domReady || !cssReady || appStarted) return;
     appStarted = true;
     var app = document.createElement('script');
-    app.src = './app-public-rc3-d26m.js?v=5';
+    app.src = './app-public-rc3-d26m.js?v=6-pollbar1';
     app.onerror = function () {
       var boot = document.getElementById('boot');
       if (boot) boot.textContent = '地図を読み込めませんでした。再読み込みしてください。';
