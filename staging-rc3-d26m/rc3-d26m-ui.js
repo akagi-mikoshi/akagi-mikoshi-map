@@ -243,6 +243,8 @@
       html += '<p><strong>検証用・地図通信の履歴</strong></p>';
       if (net && Array.isArray(net.events) && net.events.length) {
         html += '<p>取得成功：' + net.successes + '回、失敗：' + net.failures + '回（この画面を開いてから）</p>';
+        html += '<p>最大応答時間：' + (net.maxResponseMs / 1000).toFixed(1) + '秒、最大取得成功間隔：' + (net.maxSuccessGapMs / 1000).toFixed(1) + '秒（裏タブの停止時間も含む）</p>';
+        html += '<p>1回の取得で増えた最大経路記録：' + net.maxNewTrailPoints + '点</p>';
         net.events.slice(0, 8).forEach(function (e) {
           var clock = new Date(e.time).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
           var elapsed = e.elapsedMs === null ? '—' : (e.elapsedMs / 1000).toFixed(1) + '秒';
