@@ -177,3 +177,21 @@
 @media(max-width:350px){.d26-refresh{flex-basis:141px;width:141px;max-width:141px;gap:1px;font-size:10.5px}.d26-refresh-hold{flex-basis:119px;width:119px;max-width:119px;gap:2px}.d26-refresh-hold .d26-refresh-icon{width:14px;min-width:14px;height:14px;flex-basis:14px}.d26-refresh .d26-info-tap{width:20px;flex-basis:20px}}
 @media(max-width:320px){.d26-footer{flex-wrap:nowrap;justify-content:space-between;gap:3px}.d26-refresh{flex-basis:131px;width:131px;max-width:131px}.d26-refresh-hold{flex-basis:111px;width:111px;max-width:111px}.d26-refresh .d26-info-tap{width:19px;flex-basis:19px}.d26-footer-actions{flex:0 0 auto;justify-content:flex-end}.d26-footer-actions button{font-size:10px;padding:3px 3px}}
 @media(prefers-reduced-motion:reduce){.d26-poll-meter-fill{transition:none!important;animation:none!important}}
+
+/* Staging-only operator view. The public footer and normal status are unchanged. */
+.d26-gps-diagnostics[hidden], .d26-gps-lines[hidden],
+.d26-gps-warning[hidden]{display:none!important}
+.d26-enabled.d26-gps-base-hidden #status:not(.connection-error){display:none!important}
+.d26-gps-diagnostics{box-sizing:border-box;flex:0 0 auto;padding:7px 12px 8px;background:#fff;border-top:1px solid #ebe6df;color:#242a26;font:600 12px/1.45 Meiryo,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.d26-gps-lines{display:grid;gap:2px}
+.d26-gps-main{display:flex;align-items:baseline;justify-content:space-between;gap:12px;min-height:23px}
+.d26-gps-main>span{font-size:13px;font-weight:800}
+.d26-gps-main strong{font-size:19px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+.d26-gps-minor{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#444e47;font-size:12px}
+.d26-gps-minor>span:last-child{font-variant-numeric:tabular-nums}
+.d26-gps-warning{box-sizing:border-box;margin:4px 0 0;padding:8px 9px;background:#fff1d6;border-left:4px solid #b37713;color:#654108;font-size:13px;font-weight:800;line-height:1.4}
+.d26-gps-warning.d26-gps-warning-critical{background:#ffe7e4;border-color:#b82f22;color:#89241c}
+.d26-refresh-options{min-width:217px;max-width:min(282px,calc(100vw - 24px));max-height:min(78dvh,500px);overflow-y:auto}
+.d26-refresh-options-title.d26-refresh-bar-title{margin:9px 0 5px;padding-top:7px}
+.d26-refresh-options-note{margin-top:9px;color:#655c53;font-size:10.5px;line-height:1.45}
+@media(max-width:360px){.d26-gps-main strong{font-size:18px}}
