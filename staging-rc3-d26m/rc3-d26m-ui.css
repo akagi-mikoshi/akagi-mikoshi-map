@@ -164,6 +164,10 @@
 @keyframes d26-poll-blink{0%,100%{opacity:1}50%{opacity:.45}}
 .d26-refresh-options{position:absolute;bottom:calc(100% + 7px);left:0;z-index:5100;min-width:181px;padding:8px 10px 10px;border:1px solid #dad3cb;border-radius:9px;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.19);color:#302e2b}
 .d26-refresh-options.d26-hidden{display:none!important}
+.d26-refresh-options-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px}
+.d26-refresh-options-head strong{font-size:12px;font-weight:700;color:#38332f;white-space:nowrap}
+.d26-refresh-options button.d26-refresh-options-close{box-sizing:border-box;display:flex;align-items:center;justify-content:center;flex:0 0 29px;min-width:29px;width:29px;min-height:29px;height:29px;padding:0;border:0;border-radius:50%;background:#f2f0ed;color:#524c47;font:400 22px/1 sans-serif;cursor:pointer}
+.d26-refresh-options button.d26-refresh-options-close:focus-visible{outline:2px solid #94745f;outline-offset:2px}
 .d26-refresh-options-title{margin:0 0 7px;font-size:12px;font-weight:600;text-align:center;white-space:nowrap}
 .d26-refresh-options-title.d26-refresh-bar-title{margin:10px 0 7px;padding-top:8px;border-top:1px solid #eee7dd}
 .d26-refresh-option-row{display:flex;gap:5px}
