@@ -1022,6 +1022,7 @@
       window.dispatchEvent(new CustomEvent('mikoshi-public-state', {
         detail: {
           isPublic: state.isPublic,
+          isSimulation: !!state.isSimulation,
           latest: state.latest ? {
             source: state.latest.source,
             receivedAt: state.latest.receivedAt,
