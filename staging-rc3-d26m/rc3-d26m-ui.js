@@ -263,9 +263,11 @@
       var delay = Math.max(1, Number(state.delayMs) || 1);
       timeLeft = Math.max(0, (Number(state.startedAt) || Date.now()) + delay - Date.now());
       percent = Math.min(100, Math.max(0, 100 * (delay - timeLeft) / delay));
+      // Always use two digits; the fixed, left-aligned label never shifts.
+      var secondsText = String(Math.ceil(timeLeft / 1000)).padStart(2, '0');
       label.textContent = phase === 'retry'
-        ? '再試行まで ' + Math.ceil(timeLeft / 1000) + '秒'
-        : '次の取得まで ' + Math.ceil(timeLeft / 1000) + '秒';
+        ? '再試行まで ' + secondsText + '秒'
+        : '次の取得まで ' + secondsText + '秒';
     } else if (phase === 'requesting') {
       percent = 100;
       label.textContent = '位置情報を取得中…';
@@ -619,7 +621,7 @@
   // 初期サイズの判定がCSS適用前後で変わることを防ぐ。
   var css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = './rc3-d26m-ui.css?v=7-polish3px';
+  css.href = './rc3-d26m-ui.css?v=8-left-align2digit';
   var domReady = document.readyState !== 'loading';
   var cssReady = false;
   var appStarted = false;
