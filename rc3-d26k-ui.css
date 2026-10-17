@@ -134,3 +134,10 @@
 
 /* UI-only continuity: keep notice-history dismiss button circular like the notice dialog. */
 .d26-enabled #noticeHistoryClose{box-sizing:border-box;flex:0 0 36px;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border:0;border-radius:50%;background:#f2f0ed;color:inherit;font:normal 21px/1 Meiryo,sans-serif;cursor:pointer}
+
+/* Fixed production-site QR code for convenient on-screen sharing. */
+.d26-share-qr{display:flex;justify-content:center;align-items:center;margin:6px 0 14px}
+.d26-share-qr img{box-sizing:border-box;display:block;width:min(280px,100%);height:auto;aspect-ratio:1/1;border:1px solid #e5e2de;border-radius:7px;background:#fff;image-rendering:pixelated}
+.d26-share-label{display:block;margin:8px 0 5px;font-size:13px;font-weight:bold;color:#4c3e38}
+.d26-share-url{box-sizing:border-box;display:block;width:100%;max-width:100%;padding:10px 8px;border:1px solid #c4bcb4;border-radius:6px;color:#292521;background:#f8f7f6;font:12px/1.5 sans-serif}
+.d26-share-status{min-height:1.5em;color:#5c4e42;font-size:12px;text-align:center}
