@@ -180,6 +180,7 @@
     modal.classList.remove('d26-hidden');
     modal.querySelector('.d26-close').focus();
   }
+  var PUBLIC_SHARE_URL = 'https://akagi-mikoshi.github.io/akagi-mikoshi-map/';
   var menuHtml = [
     '<div class="d26-menu-list">',
     '<button type="button" data-d26-action="notice">お知らせ <span>›</span></button>',
@@ -191,6 +192,7 @@
     '<button type="button" data-d26-action="schedule-info">予定時刻の注意点 <span>›</span></button>',
     '<button type="button" data-d26-action="update">自動更新について <span>›</span></button>',
     '<button type="button" data-d26-action="guide">地図の使い方・ご利用案内 <span>›</span></button>',
+    '<button type="button" data-d26-action="share">この地図を共有（QRコード） <span>›</span></button>',
     '<button type="button" data-d26-action="about">このサイトについて <span>›</span></button>',
     '</div>'
   ].join('');
@@ -229,6 +231,36 @@
         '<p><strong>赤城保存会と祭囃子・神楽</strong><br>「流山の祭囃子、神楽等」は流山市指定無形文化財です。保持団体の赤城保存会が、伝統芸能の継承・公開に取り組んでいます。<br><a href="https://www.city.nagareyama.chiba.jp/tourism/1013087/1013105/007794.html" target="_blank" rel="noopener noreferrer">流山市公式：流山の祭囃子、神楽等（別画面）</a></p>' +
         '<p><strong>赤城神社の大しめ縄行事</strong><br>秋の祭礼に先立って地域の人々が大しめ縄を作る、流山市指定無形民俗文化財です。<br><a href="https://www.city.nagareyama.chiba.jp/tourism/1013087/1013101/1013102.html" target="_blank" rel="noopener noreferrer">流山市公式：赤城神社 大しめ縄行事（別画面）</a></p>' +
         '<p><strong>赤城神社と「流山」の地名</strong><br>赤城神社が鎮座する小山「赤城山」には、上州の赤城山の土や神社のお札が流れ着いたとする伝説があり、流山の地名伝説の舞台とされています。<br><a href="https://www.city.nagareyama.chiba.jp/tourism/1013087/1013101/1013102.html" target="_blank" rel="noopener noreferrer">流山市公式：赤城神社にまつわる伝説（別画面）</a></p>');
+      return;
+    }
+    if (action === 'share') {
+      openDialog('この地図を共有（QRコード）',
+        '<p>このQRコードを読み取ると、赤城神社例大祭の神輿巡行マップが開きます。ほかの方へのご案内にご利用ください。</p>' +
+        '<div class="d26-share-qr"><img src="/akagi-mikoshi-map/share-site-qr.svg" alt="本番用神輿巡行マップのQRコード" width="280" height="280"></div>' +
+        '<label class="d26-share-label" for="d26-share-url">共有用URL</label>' +
+        '<input id="d26-share-url" class="d26-share-url" readonly type="text" value="' + PUBLIC_SHARE_URL + '">' +
+        '<button type="button" class="d26-primary" data-d26-action="copy-share-url">URLをコピー</button>' +
+        '<p class="d26-share-status" id="d26-share-status" aria-live="polite"></p>');
+      return;
+    }
+    if (action === 'copy-share-url') {
+      var field = document.getElementById('d26-share-url');
+      var status = document.getElementById('d26-share-status');
+      function fallbackCopy() {
+        if (!field) return;
+        field.focus();
+        field.select();
+        var success = false;
+        try { success = document.execCommand('copy'); } catch (err) {}
+        if (status) status.textContent = success ? 'URLをコピーしました。' : 'URLを選択しました。長押ししてコピーしてください。';
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(PUBLIC_SHARE_URL).then(function () {
+          if (status) status.textContent = 'URLをコピーしました。';
+        }, fallbackCopy);
+      } else {
+        fallbackCopy();
+      }
       return;
     }
     if (action === 'close') { closeDialog(); return; }
@@ -419,7 +451,7 @@
   // 初期サイズの判定がCSS適用前後で変わることを防ぐ。
   var css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = './rc3-d26k-ui.css?v=2-culture1';
+  css.href = './rc3-d26k-ui.css?v=3-qr1';
   var domReady = document.readyState !== 'loading';
   var cssReady = false;
   var appStarted = false;
