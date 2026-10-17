@@ -36,6 +36,9 @@
   let stagingPollFailures = 0;
   let stagingPollSuccesses = 0;
   let stagingLatestSuccessAt = null;
+  let stagingMaxRequestMs = 0;
+  let stagingMaxSuccessGapMs = 0;
+  let stagingMaxNewTrailPoints = 0;
   let plannedRouteGroup = null;
   let routeBounds = null;
   let routeVisible = true;
@@ -839,8 +842,13 @@
       ? Math.max(0, count - stagingLastTrailCount) : null;
     if (status === '成功') {
       stagingPollSuccesses++;
+      if (stagingLatestSuccessAt) {
+        stagingMaxSuccessGapMs = Math.max(stagingMaxSuccessGapMs, now - new Date(stagingLatestSuccessAt).getTime());
+      }
       stagingLatestSuccessAt = new Date(now).toISOString();
       if (count !== null) stagingLastTrailCount = count;
+      if (Number.isFinite(elapsedMs)) stagingMaxRequestMs = Math.max(stagingMaxRequestMs, elapsedMs);
+      if (Number.isFinite(added)) stagingMaxNewTrailPoints = Math.max(stagingMaxNewTrailPoints, added);
     } else {
       stagingPollFailures++;
     }
@@ -849,11 +857,14 @@
       trailCount: count, added,
       sourceReceivedAt: state && state.latest && state.latest.receivedAt || null
     });
-    stagingPollEvents = stagingPollEvents.slice(0, 12);
+    stagingPollEvents = stagingPollEvents.slice(0, 150);
     window.MIKOSHI_STAGING_NETWORK = {
       successes: stagingPollSuccesses, failures: stagingPollFailures,
       latestSuccessAt: stagingLatestSuccessAt,
       pollIntervalMs: POLL_INTERVAL_MS,
+      maxResponseMs: stagingMaxRequestMs,
+      maxSuccessGapMs: stagingMaxSuccessGapMs,
+      maxNewTrailPoints: stagingMaxNewTrailPoints,
       events: stagingPollEvents.slice()
     };
   }
