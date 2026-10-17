@@ -1128,6 +1128,22 @@
     document.getElementById('returnButton').disabled = true;
   }
 
+  // Keep the existing popup visible as GPS updates arrive, without letting
+  // Leaflet's popup autoPan override a viewer's chosen map center or zoom.
+  // This guard applies only to programmatic GPS updates. Once restored,
+  // opening the popup intentionally retains Leaflet's normal autoPan.
+  function withoutAutoPanOnGpsUpdate_(update) {
+    const popup = marker && marker.getPopup();
+    if (!popup) return update();
+    const previousAutoPan = popup.options.autoPan;
+    popup.options.autoPan = false;
+    try {
+      return update();
+    } finally {
+      popup.options.autoPan = previousAutoPan;
+    }
+  }
+
   function showLocation(data, shouldPanToMarker) {
     const lat = Number(data.lat);
     const lon = Number(data.lon);
@@ -1146,7 +1162,7 @@
       }).addTo(map);
       marker.bindPopup('<strong>神輿の現在位置</strong>');
     } else {
-      marker.setLatLng(point);
+      withoutAutoPanOnGpsUpdate_(() => marker.setLatLng(point));
     }
 
     document.getElementById('returnButton').disabled = false;
@@ -1210,18 +1226,20 @@
       '最終更新 ' + timeText + '（' + ageText + '）' +
       accuracyText + sourceText;
 
-    marker.setPopupContent(
-      '<strong>神輿の現在位置</strong><br>' +
-      (data.source === 'default'
-        ? '赤城神社（初期位置）<br>'
-        : data.source === 'simulation'
-          ? '<strong>シミュレーション中</strong><br>'
-          : '') +
-      '最終更新 ' + timeText +
-      (Number.isFinite(accuracy) && accuracy > 0
-        ? '<br>位置精度：約' + Math.round(accuracy) + 'm'
-        : '')
-    );
+    withoutAutoPanOnGpsUpdate_(() => {
+      marker.setPopupContent(
+        '<strong>神輿の現在位置</strong><br>' +
+        (data.source === 'default'
+          ? '赤城神社（初期位置）<br>'
+          : data.source === 'simulation'
+            ? '<strong>シミュレーション中</strong><br>'
+            : '') +
+        '最終更新 ' + timeText +
+        (Number.isFinite(accuracy) && accuracy > 0
+          ? '<br>位置精度：約' + Math.round(accuracy) + 'm'
+          : '')
+      );
+    });
   }
 
   function wireNoticeUi_() {
