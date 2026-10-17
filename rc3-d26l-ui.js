@@ -184,6 +184,9 @@
     '<div class="d26-menu-list">',
     '<button type="button" data-d26-action="notice">お知らせ <span>›</span></button>',
     '<button type="button" data-d26-action="schedule">巡行地点・予定時刻一覧 <span>›</span></button>',
+    '<button type="button" class="d26-culture-link" data-d26-action="culture">' +
+      '<span class="d26-culture-text"><strong>赤城神社と流山の伝統文化</strong><small>赤城保存会のお囃子・神楽など</small></span>' +
+      '<span aria-hidden="true">›</span></button>',
     '<button type="button" data-d26-action="fit">巡行ルート全体を地図表示 <span>›</span></button>',
     '<button type="button" data-d26-action="schedule-info">予定時刻の注意点 <span>›</span></button>',
     '<button type="button" data-d26-action="update">自動更新について <span>›</span></button>',
@@ -220,6 +223,14 @@
     openDialog('お知らせ', '<p>現在、表示できるお知らせはありません。</p>');
   }
   function doAction(action) {
+    if (action === 'culture') {
+      openDialog('赤城神社と流山の伝統文化',
+        '<p>神輿巡行とともに、流山に受け継がれてきた文化にもぜひ触れてみてください。</p>' +
+        '<p><strong>赤城保存会と祭囃子・神楽</strong><br>「流山の祭囃子、神楽等」は流山市指定無形文化財です。保持団体の赤城保存会が、伝統芸能の継承・公開に取り組んでいます。<br><a href="https://www.city.nagareyama.chiba.jp/tourism/1013087/1013105/007794.html" target="_blank" rel="noopener noreferrer">流山市公式：流山の祭囃子、神楽等（別画面）</a></p>' +
+        '<p><strong>赤城神社の大しめ縄行事</strong><br>秋の祭礼に先立って地域の人々が大しめ縄を作る、流山市指定無形民俗文化財です。<br><a href="https://www.city.nagareyama.chiba.jp/tourism/1013087/1013101/1013102.html" target="_blank" rel="noopener noreferrer">流山市公式：赤城神社 大しめ縄行事（別画面）</a></p>' +
+        '<p><strong>赤城神社と「流山」の地名</strong><br>赤城神社が鎮座する小山「赤城山」には、上州の赤城山の土や神社のお札が流れ着いたとする伝説があり、流山の地名伝説の舞台とされています。<br><a href="https://www.city.nagareyama.chiba.jp/tourism/1013087/1013101/1013102.html" target="_blank" rel="noopener noreferrer">流山市公式：赤城神社にまつわる伝説（別画面）</a></p>');
+      return;
+    }
     if (action === 'close') { closeDialog(); return; }
     if (action === 'menu') { showMenu(); return; }
     if (action === 'notice') { showNotice(); return; }
@@ -408,7 +419,7 @@
   // 初期サイズの判定がCSS適用前後で変わることを防ぐ。
   var css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = './rc3-d26k-ui.css?v=1';
+  css.href = './rc3-d26k-ui.css?v=2-culture1';
   var domReady = document.readyState !== 'loading';
   var cssReady = false;
   var appStarted = false;
