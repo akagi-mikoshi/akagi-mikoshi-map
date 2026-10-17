@@ -166,7 +166,9 @@
     choices.id = 'd26-refresh-options';
     choices.setAttribute('role', 'group');
     choices.setAttribute('aria-label', '自動更新の間隔と進捗バー表示');
-    choices.innerHTML = '<div class="d26-refresh-options-title">更新間隔</div>' +
+    choices.innerHTML = '<div class="d26-refresh-options-head"><strong>自動更新の設定</strong>' +
+      '<button type="button" class="d26-refresh-options-close" data-d26-poll-close aria-label="設定を閉じる">×</button></div>' +
+      '<div class="d26-refresh-options-title">更新間隔</div>' +
       '<div class="d26-refresh-option-row"><button type="button" data-d26-poll-seconds="5">5秒</button>' +
       '<button type="button" data-d26-poll-seconds="10">10秒</button>' +
       '<button type="button" data-d26-poll-seconds="15">15秒</button></div>' +
@@ -253,6 +255,12 @@
     // A short tap does not change preferences. Long press opens this panel;
     // keep it open while selecting interval and bar visibility independently.
     choices.addEventListener('click', function(event) {
+      if (event.target.closest('[data-d26-poll-close]')) {
+        event.preventDefault();
+        setChoicesVisible(false);
+        holdButton.focus();
+        return;
+      }
       var target = event.target.closest('[data-d26-poll-seconds],[data-d26-poll-bar]');
       if (!target) return;
       event.preventDefault();
@@ -653,7 +661,7 @@
   // 初期サイズの判定がCSS適用前後で変わることを防ぐ。
   var css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = './rc3-d26m-ui.css?v=9-meter-option';
+  css.href = './rc3-d26m-ui.css?v=10-meter-close';
   var domReady = document.readyState !== 'loading';
   var cssReady = false;
   var appStarted = false;
