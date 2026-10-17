@@ -191,7 +191,7 @@
 .d26-gps-minor>span:first-child{white-space:nowrap}
 .d26-gps-minor>span:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}
 @media(max-width:350px){.d26-gps-minor{font-size:15px}}
-.d26-gps-warning{box-sizing:border-box;margin:4px 0 0;padding:8px 9px;background:#fff1d6;border-left:4px solid #b37713;color:#654108;font-size:13px;font-weight:800;line-height:1.4}
+.d26-gps-warning{box-sizing:border-box;margin:4px 0 0;padding:8px 9px;background:#fff1d6;border-left:4px solid #b37713;color:#654108;font-size:13px;font-weight:800;line-height:1.4;white-space:pre-line}
 .d26-gps-warning.d26-gps-warning-critical{background:#ffe7e4;border-color:#b82f22;color:#89241c}
 .d26-refresh-options{min-width:217px;max-width:min(282px,calc(100vw - 24px));max-height:min(78dvh,500px);overflow-y:auto}
 .d26-refresh-options-title.d26-refresh-bar-title{margin:9px 0 5px;padding-top:7px}
