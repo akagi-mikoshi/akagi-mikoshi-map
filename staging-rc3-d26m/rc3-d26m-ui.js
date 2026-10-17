@@ -44,13 +44,6 @@
     } catch (_) {}
     paintGpsDiagnostics_();
   }
-  function gpsClock_(dateValue) {
-    var date = new Date(dateValue);
-    if (!Number.isFinite(date.getTime())) return '—';
-    return date.toLocaleTimeString('ja-JP', {
-      timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', second: '2-digit'
-    });
-  }
   function gpsAge_(seconds) {
     if (seconds < 60) return seconds + '秒前';
     var minutes = Math.floor(seconds / 60);
@@ -91,9 +84,11 @@
     var details = document.getElementById('d26-gps-lines');
     if (details) details.hidden = !detailActive;
     if (count) count.textContent = gpsAge_(ageSeconds);
-    if (last) last.textContent = mapFresh
-      ? gpsClock_(state.successAt)
-      : '通信を確認中…';
+    // Keep the age of the last successful GAS fetch visible during a retry
+    // or a timeout. A stale fetch must not be mistaken for a GPS outage.
+    if (last) last.textContent = Number.isFinite(successAt)
+      ? gpsAge_(Math.max(0, Math.floor((now - successAt) / 1000)))
+      : '未取得';
     if (accuracy) {
       var a = Number(position.accuracy);
       accuracy.textContent = Number.isFinite(a) && a > 0 ? '約' + Math.round(a) + 'm' : '—';
@@ -296,8 +291,8 @@
       gpsPanel.setAttribute('aria-label', '管理者向けGPS受信状況');
       gpsPanel.hidden = true;
       gpsPanel.innerHTML = '<div id="d26-gps-lines" class="d26-gps-lines">' +
-        '<div class="d26-gps-main"><span>最終GPS受信</span><strong id="d26-gps-age">—</strong></div>' +
-        '<div class="d26-gps-minor"><span>地図の通信成功時刻</span><span id="d26-gps-fetch">—</span></div>' +
+        '<div class="d26-gps-main"><span>GPS情報の最終受信</span><strong id="d26-gps-age">—</strong></div>' +
+        '<div class="d26-gps-minor"><span>サーバー情報の最終取得</span><span id="d26-gps-fetch">—</span></div>' +
         '<div class="d26-gps-minor"><span>GPS位置精度</span><span id="d26-gps-accuracy">—</span></div></div>' +
         '<div id="d26-gps-warning" class="d26-gps-warning" role="status" hidden></div>';
       status.insertAdjacentElement('afterend', gpsPanel);
@@ -622,7 +617,8 @@
       openDialog('自動更新について',
         '<p>このページを開いている間、神輿の位置情報とお知らせを約' + (window.MIKOSHI_POLL_INTERVAL_SECONDS || (/([?&])test=1(?:&|$)/.test(window.location.search) ? 2 : 15)) + '秒ごとに自動的に取得します。</p>' +
         '<p>画面下部の自動更新表示を長押しすると、取得間隔、進捗バー、詳細表示、GPS受信アラートを選べます。設定はこのタブで保存されます。</p>' +
-        '<p>詳細表示はGPS受信からの秒数を太字で表示します。「地図の通信成功時刻」は、地図が最後にGASから情報を取得できた時刻です。GPS位置が実際に更新された時刻ではありません。</p>' +
+        '<p>「GPS情報の最終受信」はTraccarからGASへ最後に位置情報が届いてからの経過時間です。「サーバー情報の最終取得」はブラウザがGASから最後に情報を正常取得してからの経過時間です。いずれも秒単位で表示します。</p>' +
+        '<p>サーバーからの情報取得に失敗した場合も、最後の正常取得からの経過時間を表示し続けます。この間はGAS側に新しいGPS情報が届いているか判断できないため、GPS受信停止のアラートは出しません。</p>' +
         '<p>アラートはGPS受信が45秒以上ない場合に注意、90秒以上で要確認を画面内に示します。休憩中も表示される場合があります。</p>' +
         '<p>ページを閉じている間、スマートフォンにプッシュ通知が届く仕組みではありません。</p>' +
         '<p>地図に表示される「最終更新」は、神輿の現在位置を知らせるGPS端末から送られた位置情報を、システムが最後に受信・記録した時刻です。</p>' +
@@ -802,7 +798,7 @@
     if (!domReady || !cssReady || appStarted) return;
     appStarted = true;
     var app = document.createElement('script');
-    app.src = './app-public-rc3-d26m.js?v=7-left-hold';
+    app.src = './app-public-rc3-d26m.js?v=8-gps-monitor';
     app.onerror = function () {
       var boot = document.getElementById('boot');
       if (boot) boot.textContent = '地図を読み込めませんでした。再読み込みしてください。';
