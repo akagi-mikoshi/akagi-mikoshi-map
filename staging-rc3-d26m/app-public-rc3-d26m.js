@@ -1017,6 +1017,19 @@
       lastGoodState = state;
       document.getElementById('status').classList.remove('connection-error');
       showState(state);
+      // Staging-only event: inform optional operator diagnostics of the
+      // last successfully fetched GPS position, without extra API calls.
+      window.dispatchEvent(new CustomEvent('mikoshi-public-state', {
+        detail: {
+          isPublic: state.isPublic,
+          latest: state.latest ? {
+            source: state.latest.source,
+            receivedAt: state.latest.receivedAt,
+            accuracy: state.latest.accuracy
+          } : null,
+          successAt: new Date(lastSuccessfulResponseAt).toISOString()
+        }
+      }));
       scheduleNext();
     };
 
