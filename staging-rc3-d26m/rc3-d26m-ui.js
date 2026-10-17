@@ -6,6 +6,23 @@
   'use strict';
 
   var APP_VERSION = 'RC3-D2.6m';
+  // The optional progress bar is hidden by default. A viewer's own choice
+  // is kept only in the same browser tab (no changes to GPS or GAS).
+  var D26_POLL_BAR_PREF_KEY = 'akagi-map-show-pollbar-v1';
+  var d26PollBarVisible = false;
+  try { d26PollBarVisible = sessionStorage.getItem(D26_POLL_BAR_PREF_KEY) === '1'; }
+  catch (_) {}
+  function setPollBarVisible(visible, save) {
+    d26PollBarVisible = !!visible;
+    var meter = document.getElementById('d26-poll-meter');
+    var trigger = document.querySelector('.d26-refresh-hold');
+    if (meter) meter.hidden = !d26PollBarVisible;
+    if (trigger) trigger.classList.toggle('d26-pollbar-off', !d26PollBarVisible);
+    if (save !== false) {
+      try { sessionStorage.setItem(D26_POLL_BAR_PREF_KEY, d26PollBarVisible ? '1' : '0'); }
+      catch (_) {}
+    }
+  }
   var LEAFLET_ZOOM_SNAP = 0.1;
   var LEAFLET_ZOOM_DELTA = 0.25;
   // 初期倍率はルート全体表示と完全に同じfitBoundsを使う。
@@ -136,10 +153,11 @@
     var updateInfo = el('div', 'd26-refresh');
     var holdButton = el('button', 'd26-refresh-hold');
     holdButton.type = 'button';
-    holdButton.setAttribute('aria-label', '自動更新。長押しして更新間隔を変更');
-    holdButton.title = '長押しで更新間隔を変更';
+    holdButton.setAttribute('aria-label', '自動更新。長押しして取得間隔とバーの表示を変更');
+    holdButton.title = '長押しで更新間隔とバーの表示を変更';
+    holdButton.classList.toggle('d26-pollbar-off', !d26PollBarVisible);
     holdButton.innerHTML = '<svg class="d26-refresh-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.2-4.8L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.2 4.8L20 16"/><path d="M20 20v-4h-4"/></svg><span class="d26-refresh-label">自動更新：' + refreshText + '</span>' +
-      '<span id="d26-poll-meter" class="d26-poll-meter" role="progressbar" aria-label="次回の位置情報取得まで" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="d26-poll-meter-fill" id="d26-poll-meter-fill"></span></span>';
+      '<span id="d26-poll-meter" class="d26-poll-meter"' + (d26PollBarVisible ? '' : ' hidden') + ' role="progressbar" aria-label="次回の位置情報取得まで" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="d26-poll-meter-fill" id="d26-poll-meter-fill"></span></span>';
     updateInfo.appendChild(holdButton);
     var helpButton = button('', '自動更新についての説明', 'update', 'd26-info-tap');
     helpButton.innerHTML = '<svg class="d26-help-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.5" r="1.1" fill="currentColor" stroke="none"/></svg>';
@@ -147,11 +165,14 @@
     var choices = el('div', 'd26-refresh-options d26-hidden');
     choices.id = 'd26-refresh-options';
     choices.setAttribute('role', 'group');
-    choices.setAttribute('aria-label', '自動更新の間隔');
-    choices.innerHTML = '<div class="d26-refresh-options-title">更新間隔を選択</div>' +
+    choices.setAttribute('aria-label', '自動更新の間隔と進捗バー表示');
+    choices.innerHTML = '<div class="d26-refresh-options-title">更新間隔</div>' +
       '<div class="d26-refresh-option-row"><button type="button" data-d26-poll-seconds="5">5秒</button>' +
       '<button type="button" data-d26-poll-seconds="10">10秒</button>' +
-      '<button type="button" data-d26-poll-seconds="15">15秒</button></div>';
+      '<button type="button" data-d26-poll-seconds="15">15秒</button></div>' +
+      '<div class="d26-refresh-options-title d26-refresh-bar-title">進捗バーの表示</div>' +
+      '<div class="d26-refresh-option-row"><button type="button" data-d26-poll-bar="0">非表示</button>' +
+      '<button type="button" data-d26-poll-bar="1">表示する</button></div>';
     updateInfo.appendChild(choices);
     setupPollIntervalPicker(holdButton, choices);
     footer.appendChild(updateInfo);
@@ -168,6 +189,7 @@
     // 通信失敗等の状態表示は本体側が更新するため、その直後にボタン列を置く。
     if (status) status.insertAdjacentElement('afterend', footer);
     else mapWrap.insertAdjacentElement('afterend', footer);
+    setPollBarVisible(d26PollBarVisible, false);
     onPollPhase();
 
     var backdrop = el('div', 'd26-modal d26-hidden');
@@ -199,6 +221,11 @@
           btn.classList.toggle('d26-poll-selected', active);
           btn.setAttribute('aria-pressed', active ? 'true' : 'false');
         });
+        choices.querySelectorAll('[data-d26-poll-bar]').forEach(function(btn) {
+          var active = (btn.dataset.d26PollBar === '1') === d26PollBarVisible;
+          btn.classList.toggle('d26-poll-selected', active);
+          btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
       }
     }
     holdButton.addEventListener('pointerdown', function(event) {
@@ -223,18 +250,23 @@
         setChoicesVisible(true);
       }
     });
-    // A short tap does not change the interval; it must be deliberately held.
+    // A short tap does not change preferences. Long press opens this panel;
+    // keep it open while selecting interval and bar visibility independently.
     choices.addEventListener('click', function(event) {
-      var target = event.target.closest('[data-d26-poll-seconds]');
+      var target = event.target.closest('[data-d26-poll-seconds],[data-d26-poll-bar]');
       if (!target) return;
       event.preventDefault();
-      var secs = Number(target.dataset.d26PollSeconds);
-      if (window.MIKOSHI_SET_POLL_INTERVAL) {
-        window.MIKOSHI_SET_POLL_INTERVAL(secs);
+      if (target.hasAttribute('data-d26-poll-bar')) {
+        setPollBarVisible(target.dataset.d26PollBar === '1');
       } else {
-        window.MIKOSHI_POLL_INTERVAL_SECONDS = secs;
+        var secs = Number(target.dataset.d26PollSeconds);
+        if (window.MIKOSHI_SET_POLL_INTERVAL) {
+          window.MIKOSHI_SET_POLL_INTERVAL(secs);
+        } else {
+          window.MIKOSHI_POLL_INTERVAL_SECONDS = secs;
+        }
       }
-      setChoicesVisible(false);
+      setChoicesVisible(true);
     });
     document.addEventListener('pointerdown', function(event) {
       if (!choices.classList.contains('d26-hidden') &&
@@ -621,7 +653,7 @@
   // 初期サイズの判定がCSS適用前後で変わることを防ぐ。
   var css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = './rc3-d26m-ui.css?v=8-left-align2digit';
+  css.href = './rc3-d26m-ui.css?v=9-meter-option';
   var domReady = document.readyState !== 'loading';
   var cssReady = false;
   var appStarted = false;
