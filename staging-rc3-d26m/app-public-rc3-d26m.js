@@ -29,6 +29,13 @@
   let visibleFailureStartedAt = null;
   let lastWindowBlurAt = null;
   let lastPublicResumeAt = 0;
+  // Isolated preview: lightweight read-only diagnostics for public-map polling.
+  let stagingPollStartedAt = 0;
+  let stagingLastTrailCount = null;
+  let stagingPollEvents = [];
+  let stagingPollFailures = 0;
+  let stagingPollSuccesses = 0;
+  let stagingLatestSuccessAt = null;
   let plannedRouteGroup = null;
   let routeBounds = null;
   let routeVisible = true;
@@ -580,6 +587,15 @@
 
       if (!p) continue;
 
+      if (currentProgress === null) {
+        // Never initialize the passed route near the return/finish solely
+        // because a noisy first fix is nearer to the overlapping return.
+        // The first confirmed fix must be near the first route segment.
+        const firstEnd = stageSegmentBoundaries.length
+          ? routeVertices[stageSegmentBoundaries[0].endIndex] : null;
+        const allowedStart = (firstEnd ? firstEnd.progress : 450) + 30;
+        if (p.progress > allowedStart) continue;
+      }
       if (currentProgress !== null) {
         // GPS揺れによる少しの後戻りは許容するが、
         // 大きな後戻りや不自然な先飛びは候補から外す。
@@ -815,6 +831,33 @@
     });
   }
 
+  function recordStagingPoll_(status, state) {
+    const now = Date.now();
+    const elapsedMs = stagingPollStartedAt ? Math.max(0, now - stagingPollStartedAt) : null;
+    const count = state && Array.isArray(state.trail) ? state.trail.length : null;
+    const added = status === '成功' && count !== null && stagingLastTrailCount !== null
+      ? Math.max(0, count - stagingLastTrailCount) : null;
+    if (status === '成功') {
+      stagingPollSuccesses++;
+      stagingLatestSuccessAt = new Date(now).toISOString();
+      if (count !== null) stagingLastTrailCount = count;
+    } else {
+      stagingPollFailures++;
+    }
+    stagingPollEvents.unshift({
+      time: new Date(now).toISOString(), status, elapsedMs,
+      trailCount: count, added,
+      sourceReceivedAt: state && state.latest && state.latest.receivedAt || null
+    });
+    stagingPollEvents = stagingPollEvents.slice(0, 12);
+    window.MIKOSHI_STAGING_NETWORK = {
+      successes: stagingPollSuccesses, failures: stagingPollFailures,
+      latestSuccessAt: stagingLatestSuccessAt,
+      pollIntervalMs: POLL_INTERVAL_MS,
+      events: stagingPollEvents.slice()
+    };
+  }
+
   function finishPublicRequest_(callbackName) {
     clearResponseTimer();
     if (activeJsonpScript && activeJsonpScript.parentNode) {
@@ -878,6 +921,7 @@
 
   function publicRequestFailed_(callbackName) {
     if (!requestInFlight || activeCallbackName !== callbackName) return;
+    recordStagingPoll_('通信失敗・タイムアウト', null);
     finishPublicRequest_(callbackName);
     recordPublicFailure_();
   }
@@ -900,6 +944,7 @@
     }
 
     const id = ++requestSequence;
+    stagingPollStartedAt = Date.now();
     const callbackName = '__mikoshiPublic_' + id;
     const script = document.createElement('script');
     requestInFlight = true;
@@ -914,9 +959,11 @@
         return;
       }
       if (!state || typeof state.isPublic !== 'boolean') {
+        recordStagingPoll_('応答形式不正', null);
         recordPublicFailure_();
         return;
       }
+      recordStagingPoll_('成功', state);
       consecutiveFailures = 0;
       visibleFailureStartedAt = null;
       lastSuccessfulResponseAt = Date.now();
