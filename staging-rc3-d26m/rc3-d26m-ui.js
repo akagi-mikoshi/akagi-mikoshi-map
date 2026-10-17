@@ -99,9 +99,9 @@
     warning.classList.toggle('d26-gps-warning-critical', level === 'critical');
     if (level !== d26LastAlertLevel) {
       warning.textContent = level === 'critical'
-        ? '⚠ GPS情報が90秒以上更新されていません。巡行中ならTraccarを至急確認してください。'
+        ? '⚠ GPS情報が90秒以上更新されていません。\n巡行中ならTraccarを至急確認してください。'
         : level === 'caution'
-        ? '⚠ GPS情報が45秒以上更新されていません。巡行中ならTraccarを確認してください。'
+        ? '⚠ GPS情報が45秒以上更新されていません。\n巡行中ならTraccarを確認してください。'
         : '';
       d26LastAlertLevel = level;
     }
@@ -790,7 +790,7 @@
   // 初期サイズの判定がCSS適用前後で変わることを防ぐ。
   var css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = './rc3-d26m-ui.css?v=15-gps-matched-type';
+  css.href = './rc3-d26m-ui.css?v=16-gps-alert-line-break';
   var domReady = document.readyState !== 'loading';
   var cssReady = false;
   var appStarted = false;
