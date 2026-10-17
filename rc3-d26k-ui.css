@@ -131,3 +131,6 @@
 .d26-menu-list button .d26-culture-text { display:flex; min-width:0; flex:1 1 auto; flex-direction:column; gap:2px; color:#4f311f; font-size:14px; line-height:1.45; }
 .d26-menu-list .d26-culture-text strong { font-size:14px; font-weight:700; }
 .d26-menu-list .d26-culture-text small { display:block; font-size:11px; color:#775e48; }
+
+/* UI-only continuity: keep notice-history dismiss button circular like the notice dialog. */
+.d26-enabled #noticeHistoryClose{box-sizing:border-box;flex:0 0 36px;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border:0;border-radius:50%;background:#f2f0ed;color:inherit;font:normal 21px/1 Meiryo,sans-serif;cursor:pointer}
