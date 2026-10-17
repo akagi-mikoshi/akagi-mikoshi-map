@@ -134,10 +134,26 @@
     // 読み手が知りたい更新間隔を文字で常時表示する。詳しい説明はⓘのみタップ。
     var refreshText = /[?&]test=1(?:&|$)/.test(window.location.search) ? '約2秒ごと' : '約15秒ごと';
     var updateInfo = el('div', 'd26-refresh');
-    updateInfo.innerHTML = '<svg class="d26-refresh-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.2-4.8L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.2 4.8L20 16"/><path d="M20 20v-4h-4"/></svg><span class="d26-refresh-label">自動更新：' + refreshText + '</span>';
+    var holdButton = el('button', 'd26-refresh-hold');
+    holdButton.type = 'button';
+    holdButton.setAttribute('aria-label', '自動更新。長押しして更新間隔を変更');
+    holdButton.title = '長押しで更新間隔を変更';
+    holdButton.innerHTML = '<svg class="d26-refresh-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.2-4.8L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.2 4.8L20 16"/><path d="M20 20v-4h-4"/></svg><span class="d26-refresh-label">自動更新：' + refreshText + '</span>' +
+      '<span id="d26-poll-meter" class="d26-poll-meter" role="progressbar" aria-label="次回の位置情報取得まで" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="d26-poll-meter-fill" id="d26-poll-meter-fill"></span></span>';
+    updateInfo.appendChild(holdButton);
     var helpButton = button('', '自動更新についての説明', 'update', 'd26-info-tap');
     helpButton.innerHTML = '<svg class="d26-help-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.5" r="1.1" fill="currentColor" stroke="none"/></svg>';
     updateInfo.appendChild(helpButton);
+    var choices = el('div', 'd26-refresh-options d26-hidden');
+    choices.id = 'd26-refresh-options';
+    choices.setAttribute('role', 'group');
+    choices.setAttribute('aria-label', '自動更新の間隔');
+    choices.innerHTML = '<div class="d26-refresh-options-title">更新間隔を選択</div>' +
+      '<div class="d26-refresh-option-row"><button type="button" data-d26-poll-seconds="5">5秒</button>' +
+      '<button type="button" data-d26-poll-seconds="10">10秒</button>' +
+      '<button type="button" data-d26-poll-seconds="15">15秒</button></div>';
+    updateInfo.appendChild(choices);
+    setupPollIntervalPicker(holdButton, choices);
     footer.appendChild(updateInfo);
 
     var footerActions = el('div', 'd26-footer-actions');
@@ -148,15 +164,6 @@
     footerActions.appendChild(scheduleInfoButton);
     footerActions.appendChild(guideButton);
     footer.appendChild(footerActions);
-    var pollMeter = el('div', 'd26-poll-meter');
-    pollMeter.id = 'd26-poll-meter';
-    pollMeter.setAttribute('role', 'progressbar');
-    pollMeter.setAttribute('aria-label', '次回の位置情報取得まで');
-    pollMeter.setAttribute('aria-valuemin', '0');
-    pollMeter.setAttribute('aria-valuemax', '100');
-    pollMeter.setAttribute('aria-valuenow', '0');
-    pollMeter.innerHTML = '<span class="d26-poll-meter-fill" id="d26-poll-meter-fill"></span>';
-    footer.appendChild(pollMeter);
     var status = document.getElementById('status');
     // 通信失敗等の状態表示は本体側が更新するため、その直後にボタン列を置く。
     if (status) status.insertAdjacentElement('afterend', footer);
@@ -174,6 +181,71 @@
     updateBellIndicator();
   }
 
+
+
+  // Long press opens a small panel anchored to the left refresh indicator.
+  // Keyboard Enter/Space can open the same panel for accessibility.
+  function setupPollIntervalPicker(holdButton, choices) {
+    var holdTimer = null;
+    function cancelHold() {
+      if (holdTimer !== null) { clearTimeout(holdTimer); holdTimer = null; }
+    }
+    function setChoicesVisible(show) {
+      choices.classList.toggle('d26-hidden', !show);
+      if (show) {
+        var selected = Number(window.MIKOSHI_POLL_INTERVAL_SECONDS || 0);
+        choices.querySelectorAll('[data-d26-poll-seconds]').forEach(function(btn) {
+          var active = Number(btn.dataset.d26PollSeconds) === selected;
+          btn.classList.toggle('d26-poll-selected', active);
+          btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+      }
+    }
+    holdButton.addEventListener('pointerdown', function(event) {
+      if (event.button != null && event.button !== 0) return;
+      cancelHold();
+      holdTimer = setTimeout(function() {
+        holdTimer = null;
+        setChoicesVisible(true);
+      }, 550);
+    });
+    ['pointerup','pointercancel','pointerleave'].forEach(function(name) {
+      holdButton.addEventListener(name, cancelHold);
+    });
+    holdButton.addEventListener('contextmenu', function(event) {
+      event.preventDefault();
+      cancelHold();
+      setChoicesVisible(true);
+    });
+    holdButton.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        setChoicesVisible(true);
+      }
+    });
+    // A short tap does not change the interval; it must be deliberately held.
+    choices.addEventListener('click', function(event) {
+      var target = event.target.closest('[data-d26-poll-seconds]');
+      if (!target) return;
+      event.preventDefault();
+      var secs = Number(target.dataset.d26PollSeconds);
+      if (window.MIKOSHI_SET_POLL_INTERVAL) {
+        window.MIKOSHI_SET_POLL_INTERVAL(secs);
+      } else {
+        window.MIKOSHI_POLL_INTERVAL_SECONDS = secs;
+      }
+      setChoicesVisible(false);
+    });
+    document.addEventListener('pointerdown', function(event) {
+      if (!choices.classList.contains('d26-hidden') &&
+          !choices.contains(event.target) && !holdButton.contains(event.target)) {
+        setChoicesVisible(false);
+      }
+    });
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') setChoicesVisible(false);
+    });
+  }
 
   // The bar follows real request timing: next request starts 15 seconds after
   // completion (2 seconds in test mode), not on a wall-clock 15-second grid.
@@ -222,6 +294,7 @@
     }
   }
   window.addEventListener('mikoshi-poll-status', onPollPhase);
+  window.addEventListener('mikoshi-poll-interval-selected', paintPollIndicator);
 
   var lastFocused = null;
   function closeDialog() {
@@ -374,7 +447,8 @@
     }
     if (action === 'update') {
       openDialog('自動更新について',
-        '<p>このページを開いている間、神輿の位置情報とお知らせを' + (/([?&])test=1(?:&|$)/.test(window.location.search) ? '約2秒' : '約15秒') + 'ごとに自動的に取得します。</p>' +
+        '<p>このページを開いている間、神輿の位置情報とお知らせを約' + (window.MIKOSHI_POLL_INTERVAL_SECONDS || (/([?&])test=1(?:&|$)/.test(window.location.search) ? 2 : 15)) + '秒ごとに自動的に取得します。</p>' +
+        '<p>画面下部の自動更新表示を長押しすると、5秒・10秒・15秒の間隔を選べます。設定はこのタブで保存されます。</p>' +
         '<p>ページを閉じている間、スマートフォンにプッシュ通知が届く仕組みではありません。</p>' +
         '<p>地図に表示される「最終更新」は、神輿の現在位置を知らせるGPS端末から送られた位置情報を、システムが最後に受信・記録した時刻です。</p>' +
         '<p>GPSの受信状況や通信環境により、位置の更新が遅れたり、実際の位置と多少ずれたりする場合があります。</p>');
@@ -545,7 +619,7 @@
   // 初期サイズの判定がCSS適用前後で変わることを防ぐ。
   var css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = './rc3-d26m-ui.css?v=5-pollbar-visible2';
+  css.href = './rc3-d26m-ui.css?v=6-left-hold';
   var domReady = document.readyState !== 'loading';
   var cssReady = false;
   var appStarted = false;
@@ -553,7 +627,7 @@
     if (!domReady || !cssReady || appStarted) return;
     appStarted = true;
     var app = document.createElement('script');
-    app.src = './app-public-rc3-d26m.js?v=6-pollbar1';
+    app.src = './app-public-rc3-d26m.js?v=7-left-hold';
     app.onerror = function () {
       var boot = document.getElementById('boot');
       if (boot) boot.textContent = '地図を読み込めませんでした。再読み込みしてください。';
