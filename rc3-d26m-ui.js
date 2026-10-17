@@ -242,8 +242,9 @@
     var updateInfo = el('div', 'd26-refresh');
     var holdButton = el('button', 'd26-refresh-hold');
     holdButton.type = 'button';
-    holdButton.setAttribute('aria-label', '自動更新。長押しして取得間隔とバーの表示を変更');
-    holdButton.title = '長押しで更新間隔とバーの表示を変更';
+    holdButton.setAttribute('aria-label', '自動更新とGPS表示の設定を開く');
+    holdButton.setAttribute('aria-expanded', 'false');
+    holdButton.title = 'タップして更新・GPS表示の設定を開く';
     holdButton.classList.toggle('d26-pollbar-off', !d26PollBarVisible);
     holdButton.innerHTML = '<svg class="d26-refresh-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.2-4.8L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.2 4.8L20 16"/><path d="M20 20v-4h-4"/></svg><span class="d26-refresh-label">自動更新：' + refreshText + '</span>' +
       '<span id="d26-poll-meter" class="d26-poll-meter"' + (d26PollBarVisible ? '' : ' hidden') + ' role="progressbar" aria-label="次回の位置情報取得まで" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="d26-poll-meter-fill" id="d26-poll-meter-fill"></span></span>';
@@ -327,6 +328,7 @@
     }
     function setChoicesVisible(show) {
       choices.classList.toggle('d26-hidden', !show);
+      holdButton.setAttribute('aria-expanded', show ? 'true' : 'false');
       if (show) {
         var selected = Number(window.MIKOSHI_POLL_INTERVAL_SECONDS || 0);
         choices.querySelectorAll('[data-d26-poll-seconds]').forEach(function(btn) {
@@ -351,6 +353,13 @@
         });
       }
     }
+    // A normal tap is reliable on iPhone and avoids Android's system-level
+    // long-press search shortcut. Long press remains a supported alternative.
+    holdButton.addEventListener('click', function(event) {
+      event.preventDefault();
+      cancelHold();
+      setChoicesVisible(true);
+    });
     holdButton.addEventListener('pointerdown', function(event) {
       if (event.button != null && event.button !== 0) return;
       cancelHold();
@@ -373,8 +382,7 @@
         setChoicesVisible(true);
       }
     });
-    // A short tap does not change preferences. Long press opens this panel;
-    // keep it open while selecting interval and bar visibility independently.
+    // Tap or long press opens this panel; it remains open until closed.
     choices.addEventListener('click', function(event) {
       if (event.target.closest('[data-d26-poll-close]')) {
         event.preventDefault();
@@ -490,6 +498,7 @@
       '<span aria-hidden="true">›</span></button>',
     '<button type="button" data-d26-action="fit">巡行ルート全体を地図表示 <span>›</span></button>',
     '<button type="button" data-d26-action="schedule-info">予定時刻の注意点 <span>›</span></button>',
+    '<button type="button" data-d26-action="refresh-settings">自動更新・GPS表示の設定 <span>›</span></button>',
     '<button type="button" data-d26-action="update">自動更新について <span>›</span></button>',
     '<button type="button" data-d26-action="guide">地図の使い方・ご利用案内 <span>›</span></button>',
     '<button type="button" data-d26-action="share">この地図を共有（QRコード） <span>›</span></button>',
@@ -578,10 +587,16 @@
       if (fitButton) fitButton.click();
       return;
     }
+    if (action === 'refresh-settings') {
+      closeDialog();
+      var refreshButton = document.querySelector('.d26-refresh-hold');
+      if (refreshButton) refreshButton.click();
+      return;
+    }
     if (action === 'update') {
       openDialog('自動更新について',
         '<p>このページを開いている間、神輿の位置情報とお知らせを約' + (window.MIKOSHI_POLL_INTERVAL_SECONDS || (/([?&])test=1(?:&|$)/.test(window.location.search) ? 2 : 15)) + '秒ごとに自動的に取得します。</p>' +
-        '<p>画面下部の自動更新表示を長押しすると、取得間隔、進捗バー、詳細表示、GPS受信アラートを選べます。設定はこのタブで保存されます。</p>' +
+        '<p>画面下部の自動更新表示をタップするか、右上のメニューから「自動更新・GPS表示の設定」を選ぶと、取得間隔、進捗バー、詳細表示、GPS受信アラートを変更できます。設定はこのタブで保存されます。</p>' +
         '<p>「GPS情報の最終受信」はTraccarからGASへ最後に位置情報が届いてからの経過時間です。「サーバー情報の最終取得」はブラウザがGASから最後に情報を正常取得してからの経過時間です。いずれも秒単位で表示します。</p>' +
         '<p>サーバーからの情報取得に失敗した場合も、最後の正常取得からの経過時間を表示し続けます。この間はGAS側に新しいGPS情報が届いているか判断できないため、GPS受信停止のアラートは出しません。</p>' +
         '<p>アラートはGPS受信が45秒以上ない場合に注意、90秒以上で要確認を画面内に示します。休憩中も表示される場合があります。</p>' +
