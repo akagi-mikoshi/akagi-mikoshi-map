@@ -136,3 +136,10 @@
 .d26-menu-list button .d26-culture-text { display:flex; min-width:0; flex:1 1 auto; flex-direction:column; gap:2px; color:#4f311f; font-size:14px; line-height:1.45; }
 .d26-menu-list .d26-culture-text strong { font-size:14px; font-weight:700; }
 .d26-menu-list .d26-culture-text small { display:block; font-size:11px; color:#775e48; }
+
+/* Fixed production-site QR code for convenient on-screen sharing. */
+.d26-share-qr{display:flex;justify-content:center;align-items:center;margin:6px 0 14px}
+.d26-share-qr img{box-sizing:border-box;display:block;width:min(280px,100%);height:auto;aspect-ratio:1/1;border:1px solid #e5e2de;border-radius:7px;background:#fff;image-rendering:pixelated}
+.d26-share-label{display:block;margin:8px 0 5px;font-size:13px;font-weight:bold;color:#4c3e38}
+.d26-share-url{box-sizing:border-box;display:block;width:100%;max-width:100%;padding:10px 8px;border:1px solid #c4bcb4;border-radius:6px;color:#292521;background:#f8f7f6;font:12px/1.5 sans-serif}
+.d26-share-status{min-height:1.5em;color:#5c4e42;font-size:12px;text-align:center}
