@@ -50,7 +50,7 @@ body{display:flex;flex-direction:column}
 .notice-panel.hidden{display:none}
 .notice-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:7px}
 .notice-head strong{font-size:16px}
-#noticeClose{flex:0 0 auto;width:36px;height:36px;border:0;border-radius:50%;background:rgba(255,255,255,.75);font-size:21px}
+#noticeClose,#noticeHistoryClose{box-sizing:border-box;flex:0 0 36px;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border:0;border-radius:50%;background:#f2f0ed;color:inherit;font:normal 21px/1 Meiryo,sans-serif;cursor:pointer}
 #noticeText{font-size:15px;line-height:1.7;font-weight:600}
 #noticeUpdated{font-size:11px;margin-top:7px;opacity:.72}
 .notice-collapsed{position:absolute;z-index:810;top:10px;left:50%;transform:translateX(-50%);border:1px solid #c7a74e;background:rgba(255,248,223,.96);color:#4b3a0d;border-radius:999px;padding:6px 10px;font:700 11px Meiryo,sans-serif;box-shadow:0 1px 5px rgba(0,0,0,.20);white-space:nowrap}
