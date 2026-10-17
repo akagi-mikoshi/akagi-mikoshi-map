@@ -121,7 +121,7 @@
 
   async function prepare() {
     await Promise.all([
-      loadStylesheet('./style.css?v=' + VERSION),
+      loadStylesheet('./style.css?v=' + VERSION + '-noticefix1'),
       loadScript('./config.js?v=' + VERSION)
     ]);
 
