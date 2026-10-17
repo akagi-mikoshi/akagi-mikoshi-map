@@ -353,12 +353,10 @@
         });
       }
     }
-    // A normal tap is reliable on iPhone and avoids Android's system-level
-    // long-press search shortcut. Long press remains a supported alternative.
+    // A short tap must NOT open settings: avoid accidental touches.
+    // Settings open only on a deliberate long press (or keyboard).
     holdButton.addEventListener('click', function(event) {
       event.preventDefault();
-      cancelHold();
-      setChoicesVisible(true);
     });
     holdButton.addEventListener('pointerdown', function(event) {
       if (event.button != null && event.button !== 0) return;
@@ -382,7 +380,7 @@
         setChoicesVisible(true);
       }
     });
-    // Tap or long press opens this panel; it remains open until closed.
+    // Long press opens this panel; it remains open until closed.
     choices.addEventListener('click', function(event) {
       if (event.target.closest('[data-d26-poll-close]')) {
         event.preventDefault();
