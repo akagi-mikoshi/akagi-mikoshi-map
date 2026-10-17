@@ -790,7 +790,7 @@
   // 初期サイズの判定がCSS適用前後で変わることを防ぐ。
   var css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = './rc3-d26m-ui.css?v=14-gps-first-row-type';
+  css.href = './rc3-d26m-ui.css?v=15-gps-matched-type';
   var domReady = document.readyState !== 'loading';
   var cssReady = false;
   var appStarted = false;
