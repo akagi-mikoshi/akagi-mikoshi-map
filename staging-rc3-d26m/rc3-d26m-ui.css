@@ -150,8 +150,9 @@
 .d26-refresh{box-sizing:border-box;position:relative;display:flex;align-items:center;justify-content:flex-start;flex:0 0 166px;width:166px;max-width:166px;min-width:0;gap:3px}
 .d26-refresh-hold{appearance:none;box-sizing:border-box;position:relative;display:inline-flex;align-items:center;flex:0 0 138px;width:138px;max-width:138px;min-width:0;gap:3px;min-height:32px;padding:1px 0 6px;border:0;background:transparent;color:inherit;font:inherit;white-space:nowrap;cursor:pointer;touch-action:pan-y;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .d26-refresh-hold:focus-visible{outline:2px solid #94745f;outline-offset:2px;border-radius:3px}
+.d26-refresh-hold{text-align:left}
 .d26-refresh-hold .d26-refresh-icon{flex:0 0 17px}
-.d26-refresh-hold .d26-refresh-label{box-sizing:border-box;display:block;flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap;font-variant-numeric:tabular-nums}
+.d26-refresh-hold .d26-refresh-label{box-sizing:border-box;display:block;flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap;text-align:left;direction:ltr;font-variant-numeric:tabular-nums}
 .d26-refresh .d26-info-tap{width:24px;flex:0 0 24px;padding:0}
 .d26-footer .d26-footer-actions{margin-left:auto;flex:0 0 auto;justify-content:flex-end}
 .d26-refresh-hold .d26-poll-meter{box-sizing:border-box;position:absolute;left:0;right:0;bottom:2px;display:block;height:3px;overflow:hidden;background:#eff2ef;border-radius:999px;pointer-events:none}
