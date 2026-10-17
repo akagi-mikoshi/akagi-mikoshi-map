@@ -63,15 +63,10 @@
     var state = d26GpsLatest;
     var position = state && state.latest;
     var gpsAt = position ? new Date(position.receivedAt).getTime() : NaN;
-    var goodGps = !!(state && state.isPublic && position && position.source === 'gps' &&
-      Number.isFinite(gpsAt));
+    var goodGps = !!(state && state.isPublic && !state.isSimulation &&
+      position && position.source === 'gps' && Number.isFinite(gpsAt));
     var detailActive = d26GpsDetail && goodGps;
     var alertActive = d26GpsAlert && goodGps;
-    var showPanel = detailActive || alertActive;
-    panel.hidden = !showPanel;
-    document.body.classList.toggle('d26-gps-base-hidden',
-      !!(detailActive && !normal.classList.contains('connection-error')));
-    if (!showPanel) { d26LastAlertLevel = ''; return; }
     var now = Date.now();
     var ageSeconds = Math.max(0, Math.floor((now - gpsAt) / 1000));
     var successAt = state ? new Date(state.successAt).getTime() : NaN;
@@ -81,6 +76,15 @@
     var mapFresh = Number.isFinite(successAt) && now - successAt <=
       Math.max(30000, pollSeconds * 1000 + 15000) &&
       phase !== 'retry' && phase !== 'unavailable';
+    var level = !alertActive || !mapFresh ? '' :
+      ageSeconds >= 90 ? 'critical' : ageSeconds >= 45 ? 'caution' : '';
+    // When only the alert is enabled, do not reserve empty screen space
+    // while GPS reception is normal.
+    var showPanel = detailActive || !!level;
+    panel.hidden = !showPanel;
+    document.body.classList.toggle('d26-gps-base-hidden',
+      !!(detailActive && !normal.classList.contains('connection-error')));
+    if (!showPanel) { d26LastAlertLevel = ''; return; }
     var count = document.getElementById('d26-gps-age');
     var last = document.getElementById('d26-gps-fetch');
     var accuracy = document.getElementById('d26-gps-accuracy');
@@ -96,8 +100,6 @@
     }
     var warning = document.getElementById('d26-gps-warning');
     if (!warning) return;
-    var level = !alertActive || !mapFresh ? '' :
-      ageSeconds >= 90 ? 'critical' : ageSeconds >= 45 ? 'caution' : '';
     warning.hidden = !level;
     warning.classList.toggle('d26-gps-warning-critical', level === 'critical');
     if (level !== d26LastAlertLevel) {
