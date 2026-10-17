@@ -776,7 +776,7 @@
     if (!domReady || !cssReady || appStarted) return;
     appStarted = true;
     var app = document.createElement('script');
-    app.src = './app-public-rc3-d26m.js?v=8-gps-monitor';
+    app.src = './app-public-rc3-d26m.js?v=9-popup-pan-guard';
     app.onerror = function () {
       var boot = document.getElementById('boot');
       if (boot) boot.textContent = '地図を読み込めませんでした。再読み込みしてください。';
