@@ -788,6 +788,13 @@
     });
   }
 
+  // Read-only UI signal; does not change GPS, API requests or polling cadence.
+  function reportPollPhase_(phase, delayMs = 0) {
+    const info = { phase, startedAt: Date.now(), delayMs };
+    window.MIKOSHI_POLL_STATUS = info;
+    window.dispatchEvent(new CustomEvent('mikoshi-poll-status', { detail: info }));
+  }
+
   function finishPublicRequest_(callbackName) {
     clearResponseTimer();
     if (activeJsonpScript && activeJsonpScript.parentNode) {
@@ -814,8 +821,10 @@
     pollTimer = null;
     if (!publicUiReady || document.visibilityState === 'hidden') {
       pausedForHidden = true;
+      reportPollPhase_('paused');
       return;
     }
+    reportPollPhase_(consecutiveFailures ? 'retry' : 'waiting', delayMs);
     pollTimer = setTimeout(loadPublicState, delayMs);
   }
 
@@ -869,6 +878,7 @@
     if (!API_URL || !API_URL.endsWith('/exec')) {
       document.getElementById('status').textContent = '⚠ 位置情報サービスの設定を確認してください。';
       document.getElementById('status').classList.add('connection-error');
+      reportPollPhase_('unavailable');
       return;
     }
 
@@ -876,6 +886,7 @@
     const callbackName = '__mikoshiPublic_' + id;
     const script = document.createElement('script');
     requestInFlight = true;
+    reportPollPhase_('requesting');
     activeCallbackName = callbackName;
     activeJsonpScript = script;
 
@@ -909,6 +920,7 @@
 
   function suspendPublicPolling_() {
     pausedForHidden = true;
+    reportPollPhase_('paused');
     if (pollTimer) {
       clearTimeout(pollTimer);
       pollTimer = null;
