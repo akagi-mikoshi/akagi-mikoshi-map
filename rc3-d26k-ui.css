@@ -124,3 +124,10 @@
 
 /* 下段の説明リンクが長くなっても、狭い端末では折り返せるようにする。 */
 @media(max-width:360px){.d26-footer{flex-wrap:wrap;justify-content:center;row-gap:1px}.d26-refresh{justify-content:center}.d26-footer-actions{justify-content:center}}
+
+/* Cultural information is highlighted in the menu only; route/map behavior is unchanged. */
+.d26-menu-list button.d26-culture-link { margin:7px 0; padding:11px 10px; background:#fff7e8; border-left:4px solid #a37636; border-bottom:1px solid #e8d9bc; border-radius:8px; gap:8px; }
+.d26-menu-list button.d26-culture-link:focus-visible { outline:2px solid #8a5e23; outline-offset:2px; }
+.d26-menu-list button .d26-culture-text { display:flex; min-width:0; flex:1 1 auto; flex-direction:column; gap:2px; color:#4f311f; font-size:14px; line-height:1.45; }
+.d26-menu-list .d26-culture-text strong { font-size:14px; font-weight:700; }
+.d26-menu-list .d26-culture-text small { display:block; font-size:11px; color:#775e48; }
