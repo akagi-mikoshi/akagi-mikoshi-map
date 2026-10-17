@@ -23,6 +23,98 @@
       catch (_) {}
     }
   }
+  // Operator-only display choices. Public/default presentation is unchanged.
+  var D26_GPS_DETAIL_PREF_KEY = 'akagi-map-gps-detail-v1';
+  var D26_GPS_ALERT_PREF_KEY = 'akagi-map-gps-alert-v1';
+  var d26GpsDetail = false;
+  var d26GpsAlert = false;
+  try {
+    d26GpsDetail = sessionStorage.getItem(D26_GPS_DETAIL_PREF_KEY) === '1';
+    d26GpsAlert = sessionStorage.getItem(D26_GPS_ALERT_PREF_KEY) === '1';
+  } catch (_) {}
+  var d26GpsLatest = null;
+  var d26GpsTicker = null;
+  var d26LastAlertLevel = '';
+  function setGpsPreferences_(type, enabled) {
+    if (type === 'detail') d26GpsDetail = !!enabled;
+    if (type === 'alert') d26GpsAlert = !!enabled;
+    try {
+      sessionStorage.setItem(type === 'detail' ? D26_GPS_DETAIL_PREF_KEY : D26_GPS_ALERT_PREF_KEY,
+        enabled ? '1' : '0');
+    } catch (_) {}
+    paintGpsDiagnostics_();
+  }
+  function gpsClock_(dateValue) {
+    var date = new Date(dateValue);
+    if (!Number.isFinite(date.getTime())) return '—';
+    return date.toLocaleTimeString('ja-JP', {
+      timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+  }
+  function gpsAge_(seconds) {
+    if (seconds < 60) return seconds + '秒前';
+    var minutes = Math.floor(seconds / 60);
+    return minutes + '分' + String(seconds % 60).padStart(2, '0') + '秒前';
+  }
+  function paintGpsDiagnostics_() {
+    var panel = document.getElementById('d26-gps-diagnostics');
+    var normal = document.getElementById('status');
+    if (!panel || !normal) return;
+    var state = d26GpsLatest;
+    var position = state && state.latest;
+    var gpsAt = position ? new Date(position.receivedAt).getTime() : NaN;
+    var goodGps = !!(state && state.isPublic && position && position.source === 'gps' &&
+      Number.isFinite(gpsAt));
+    var detailActive = d26GpsDetail && goodGps;
+    var alertActive = d26GpsAlert && goodGps;
+    var showPanel = detailActive || alertActive;
+    panel.hidden = !showPanel;
+    document.body.classList.toggle('d26-gps-base-hidden',
+      !!(detailActive && !normal.classList.contains('connection-error')));
+    if (!showPanel) { d26LastAlertLevel = ''; return; }
+    var now = Date.now();
+    var ageSeconds = Math.max(0, Math.floor((now - gpsAt) / 1000));
+    var successAt = state ? new Date(state.successAt).getTime() : NaN;
+    var phase = window.MIKOSHI_POLL_STATUS && window.MIKOSHI_POLL_STATUS.phase;
+    // Never call a GPS outage when the map itself cannot confirm fresh data.
+    var pollSeconds = Number(window.MIKOSHI_POLL_INTERVAL_SECONDS) || 15;
+    var mapFresh = Number.isFinite(successAt) && now - successAt <=
+      Math.max(30000, pollSeconds * 1000 + 15000) &&
+      phase !== 'retry' && phase !== 'unavailable';
+    var count = document.getElementById('d26-gps-age');
+    var last = document.getElementById('d26-gps-fetch');
+    var accuracy = document.getElementById('d26-gps-accuracy');
+    var details = document.getElementById('d26-gps-lines');
+    if (details) details.hidden = !detailActive;
+    if (count) count.textContent = gpsAge_(ageSeconds);
+    if (last) last.textContent = mapFresh
+      ? gpsClock_(state.successAt) + '　正常'
+      : '通信を確認中…';
+    if (accuracy) {
+      var a = Number(position.accuracy);
+      accuracy.textContent = Number.isFinite(a) && a > 0 ? '約' + Math.round(a) + 'm' : '—';
+    }
+    var warning = document.getElementById('d26-gps-warning');
+    if (!warning) return;
+    var level = !alertActive || !mapFresh ? '' :
+      ageSeconds >= 90 ? 'critical' : ageSeconds >= 45 ? 'caution' : '';
+    warning.hidden = !level;
+    warning.classList.toggle('d26-gps-warning-critical', level === 'critical');
+    if (level !== d26LastAlertLevel) {
+      warning.textContent = level === 'critical'
+        ? '⚠ GPS情報が90秒以上更新されていません。巡行中ならTraccarを確認してください。'
+        : level === 'caution'
+        ? '⚠ GPS情報の更新が45秒以上ありません。停止中でなければ確認してください。'
+        : '';
+      d26LastAlertLevel = level;
+    }
+  }
+  window.addEventListener('mikoshi-public-state', function(event) {
+    d26GpsLatest = event.detail || null;
+    paintGpsDiagnostics_();
+  });
+  window.addEventListener('mikoshi-poll-status', paintGpsDiagnostics_);
+  document.addEventListener('visibilitychange', paintGpsDiagnostics_);
   var LEAFLET_ZOOM_SNAP = 0.1;
   var LEAFLET_ZOOM_DELTA = 0.25;
   // 初期倍率はルート全体表示と完全に同じfitBoundsを使う。
@@ -165,7 +257,7 @@
     var choices = el('div', 'd26-refresh-options d26-hidden');
     choices.id = 'd26-refresh-options';
     choices.setAttribute('role', 'group');
-    choices.setAttribute('aria-label', '自動更新の間隔と進捗バー表示');
+    choices.setAttribute('aria-label', '自動更新と管理者向け表示の設定');
     choices.innerHTML = '<div class="d26-refresh-options-head"><strong>自動更新の設定</strong>' +
       '<button type="button" class="d26-refresh-options-close" data-d26-poll-close aria-label="設定を閉じる">×</button></div>' +
       '<div class="d26-refresh-options-title">更新間隔</div>' +
@@ -174,7 +266,14 @@
       '<button type="button" data-d26-poll-seconds="15">15秒</button></div>' +
       '<div class="d26-refresh-options-title d26-refresh-bar-title">進捗バーの表示</div>' +
       '<div class="d26-refresh-option-row"><button type="button" data-d26-poll-bar="0">非表示</button>' +
-      '<button type="button" data-d26-poll-bar="1">表示する</button></div>';
+      '<button type="button" data-d26-poll-bar="1">表示する</button></div>' +
+      '<div class="d26-refresh-options-title d26-refresh-bar-title">位置情報の表示</div>' +
+      '<div class="d26-refresh-option-row"><button type="button" data-d26-gps-detail="0">通常</button>' +
+      '<button type="button" data-d26-gps-detail="1">詳細（太字）</button></div>' +
+      '<div class="d26-refresh-options-title d26-refresh-bar-title">GPS受信アラート（45秒・90秒）</div>' +
+      '<div class="d26-refresh-option-row"><button type="button" data-d26-gps-alert="0">なし</button>' +
+      '<button type="button" data-d26-gps-alert="1">画面に表示</button></div>' +
+      '<div class="d26-refresh-options-note">この画面を開いているときのみ確認します。休憩中は更新が空く場合があります。</div>';
     updateInfo.appendChild(choices);
     setupPollIntervalPicker(holdButton, choices);
     footer.appendChild(updateInfo);
@@ -189,10 +288,25 @@
     footer.appendChild(footerActions);
     var status = document.getElementById('status');
     // 通信失敗等の状態表示は本体側が更新するため、その直後にボタン列を置く。
-    if (status) status.insertAdjacentElement('afterend', footer);
-    else mapWrap.insertAdjacentElement('afterend', footer);
+    if (status) {
+      var gpsPanel = el('section', 'd26-gps-diagnostics');
+      gpsPanel.id = 'd26-gps-diagnostics';
+      gpsPanel.setAttribute('aria-label', '管理者向けGPS受信状況');
+      gpsPanel.hidden = true;
+      gpsPanel.innerHTML = '<div id="d26-gps-lines" class="d26-gps-lines">' +
+        '<div class="d26-gps-main"><span>最終GPS受信</span><strong id="d26-gps-age">—</strong></div>' +
+        '<div class="d26-gps-minor"><span>地図情報取得</span><span id="d26-gps-fetch">—</span></div>' +
+        '<div class="d26-gps-minor"><span>位置精度</span><span id="d26-gps-accuracy">—</span></div></div>' +
+        '<div id="d26-gps-warning" class="d26-gps-warning" role="status" hidden></div>';
+      status.insertAdjacentElement('afterend', gpsPanel);
+      gpsPanel.insertAdjacentElement('afterend', footer);
+    } else mapWrap.insertAdjacentElement('afterend', footer);
+    if (!d26GpsTicker) d26GpsTicker = setInterval(function() {
+      if (document.visibilityState !== 'hidden') paintGpsDiagnostics_();
+    }, 1000);
     setPollBarVisible(d26PollBarVisible, false);
     onPollPhase();
+    paintGpsDiagnostics_();
 
     var backdrop = el('div', 'd26-modal d26-hidden');
     backdrop.id = 'd26-modal';
@@ -225,6 +339,16 @@
         });
         choices.querySelectorAll('[data-d26-poll-bar]').forEach(function(btn) {
           var active = (btn.dataset.d26PollBar === '1') === d26PollBarVisible;
+          btn.classList.toggle('d26-poll-selected', active);
+          btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        choices.querySelectorAll('[data-d26-gps-detail]').forEach(function(btn) {
+          var active = (btn.dataset.d26GpsDetail === '1') === d26GpsDetail;
+          btn.classList.toggle('d26-poll-selected', active);
+          btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        choices.querySelectorAll('[data-d26-gps-alert]').forEach(function(btn) {
+          var active = (btn.dataset.d26GpsAlert === '1') === d26GpsAlert;
           btn.classList.toggle('d26-poll-selected', active);
           btn.setAttribute('aria-pressed', active ? 'true' : 'false');
         });
@@ -261,11 +385,16 @@
         holdButton.focus();
         return;
       }
-      var target = event.target.closest('[data-d26-poll-seconds],[data-d26-poll-bar]');
+      var target = event.target.closest(
+        '[data-d26-poll-seconds],[data-d26-poll-bar],[data-d26-gps-detail],[data-d26-gps-alert]');
       if (!target) return;
       event.preventDefault();
       if (target.hasAttribute('data-d26-poll-bar')) {
         setPollBarVisible(target.dataset.d26PollBar === '1');
+      } else if (target.hasAttribute('data-d26-gps-detail')) {
+        setGpsPreferences_('detail', target.dataset.d26GpsDetail === '1');
+      } else if (target.hasAttribute('data-d26-gps-alert')) {
+        setGpsPreferences_('alert', target.dataset.d26GpsAlert === '1');
       } else {
         var secs = Number(target.dataset.d26PollSeconds);
         if (window.MIKOSHI_SET_POLL_INTERVAL) {
@@ -490,7 +619,8 @@
     if (action === 'update') {
       openDialog('自動更新について',
         '<p>このページを開いている間、神輿の位置情報とお知らせを約' + (window.MIKOSHI_POLL_INTERVAL_SECONDS || (/([?&])test=1(?:&|$)/.test(window.location.search) ? 2 : 15)) + '秒ごとに自動的に取得します。</p>' +
-        '<p>画面下部の自動更新表示を長押しすると、5秒・10秒・15秒の間隔を選べます。設定はこのタブで保存されます。</p>' +
+        '<p>画面下部の自動更新表示を長押しすると、取得間隔、進捗バー、詳細表示、GPS受信アラートを選べます。設定はこのタブで保存されます。</p>' +
+        '<p>詳細表示はGPS受信からの秒数を太字で表示します。アラートはGPS受信が45秒以上ない場合に注意、90秒以上で要確認を画面内に示します。休憩中も表示される場合があります。</p>' +
         '<p>ページを閉じている間、スマートフォンにプッシュ通知が届く仕組みではありません。</p>' +
         '<p>地図に表示される「最終更新」は、神輿の現在位置を知らせるGPS端末から送られた位置情報を、システムが最後に受信・記録した時刻です。</p>' +
         '<p>GPSの受信状況や通信環境により、位置の更新が遅れたり、実際の位置と多少ずれたりする場合があります。</p>');
@@ -661,7 +791,7 @@
   // 初期サイズの判定がCSS適用前後で変わることを防ぐ。
   var css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = './rc3-d26m-ui.css?v=10-meter-close';
+  css.href = './rc3-d26m-ui.css?v=11-gps-operator';
   var domReady = document.readyState !== 'loading';
   var cssReady = false;
   var appStarted = false;
