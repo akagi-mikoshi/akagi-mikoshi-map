@@ -545,7 +545,7 @@
   // 初期サイズの判定がCSS適用前後で変わることを防ぐ。
   var css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = './rc3-d26m-ui.css?v=4-pollbar1';
+  css.href = './rc3-d26m-ui.css?v=5-pollbar-visible2';
   var domReady = document.readyState !== 'loading';
   var cssReady = false;
   var appStarted = false;
