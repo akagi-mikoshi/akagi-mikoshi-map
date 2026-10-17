@@ -92,8 +92,8 @@
     if (details) details.hidden = !detailActive;
     if (count) count.textContent = gpsAge_(ageSeconds);
     if (last) last.textContent = mapFresh
-      ? gpsClock_(state.successAt) + '　正常'
-      : '通信を確認中…';
+      ? gpsClock_(state.successAt) + '（成功）'
+      : '確認中…';
     if (accuracy) {
       var a = Number(position.accuracy);
       accuracy.textContent = Number.isFinite(a) && a > 0 ? '約' + Math.round(a) + 'm' : '—';
@@ -297,8 +297,8 @@
       gpsPanel.hidden = true;
       gpsPanel.innerHTML = '<div id="d26-gps-lines" class="d26-gps-lines">' +
         '<div class="d26-gps-main"><span>最終GPS受信</span><strong id="d26-gps-age">—</strong></div>' +
-        '<div class="d26-gps-minor"><span>地図情報取得</span><span id="d26-gps-fetch">—</span></div>' +
-        '<div class="d26-gps-minor"><span>位置精度</span><span id="d26-gps-accuracy">—</span></div></div>' +
+        '<div class="d26-gps-minor"><span>サーバー確認時刻</span><span id="d26-gps-fetch">—</span></div>' +
+        '<div class="d26-gps-minor"><span>GPS位置精度</span><span id="d26-gps-accuracy">—</span></div></div>' +
         '<div id="d26-gps-warning" class="d26-gps-warning" role="status" hidden></div>';
       status.insertAdjacentElement('afterend', gpsPanel);
       gpsPanel.insertAdjacentElement('afterend', footer);
@@ -622,7 +622,8 @@
       openDialog('自動更新について',
         '<p>このページを開いている間、神輿の位置情報とお知らせを約' + (window.MIKOSHI_POLL_INTERVAL_SECONDS || (/([?&])test=1(?:&|$)/.test(window.location.search) ? 2 : 15)) + '秒ごとに自動的に取得します。</p>' +
         '<p>画面下部の自動更新表示を長押しすると、取得間隔、進捗バー、詳細表示、GPS受信アラートを選べます。設定はこのタブで保存されます。</p>' +
-        '<p>詳細表示はGPS受信からの秒数を太字で表示します。アラートはGPS受信が45秒以上ない場合に注意、90秒以上で要確認を画面内に示します。休憩中も表示される場合があります。</p>' +
+        '<p>詳細表示はGPS受信からの秒数を太字で表示します。「サーバー確認時刻」は地図がサーバーから情報を最後に取得した時刻であり、GPSの位置情報が新しくなった時刻とは異なります。</p>' +
+        '<p>アラートはGPS受信が45秒以上ない場合に注意、90秒以上で要確認を画面内に示します。休憩中も表示される場合があります。</p>' +
         '<p>ページを閉じている間、スマートフォンにプッシュ通知が届く仕組みではありません。</p>' +
         '<p>地図に表示される「最終更新」は、神輿の現在位置を知らせるGPS端末から送られた位置情報を、システムが最後に受信・記録した時刻です。</p>' +
         '<p>GPSの受信状況や通信環境により、位置の更新が遅れたり、実際の位置と多少ずれたりする場合があります。</p>');
@@ -793,7 +794,7 @@
   // 初期サイズの判定がCSS適用前後で変わることを防ぐ。
   var css = document.createElement('link');
   css.rel = 'stylesheet';
-  css.href = './rc3-d26m-ui.css?v=11-gps-operator';
+  css.href = './rc3-d26m-ui.css?v=12-gps-readable';
   var domReady = document.readyState !== 'loading';
   var cssReady = false;
   var appStarted = false;
