@@ -99,9 +99,9 @@
     warning.classList.toggle('d26-gps-warning-critical', level === 'critical');
     if (level !== d26LastAlertLevel) {
       warning.textContent = level === 'critical'
-        ? '⚠ GPS情報が90秒以上更新されていません。巡行中ならTraccarを確認してください。'
+        ? '⚠ GPS情報が90秒以上更新されていません。巡行中ならTraccarを至急確認してください。'
         : level === 'caution'
-        ? '⚠ GPS情報の更新が45秒以上ありません。停止中でなければ確認してください。'
+        ? '⚠ GPS情報が45秒以上更新されていません。巡行中ならTraccarを確認してください。'
         : '';
       d26LastAlertLevel = level;
     }
