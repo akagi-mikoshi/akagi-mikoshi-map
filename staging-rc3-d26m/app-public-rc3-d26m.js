@@ -5,7 +5,14 @@
   const MIKOSHI_IMAGE = './mikoshi_marker.png?v=' + VERSION;
   const TEST_MODE =
     new URLSearchParams(window.location.search).get('test') === '1';
-  const POLL_INTERVAL_MS = TEST_MODE ? 2000 : 15000;
+  // Per-viewer refresh selection; affects only this browser tab, not GAS or GPS.
+  const D26_POLL_STORAGE_KEY = 'akagi-map-poll-seconds-v1';
+  let POLL_INTERVAL_MS = TEST_MODE ? 2000 : 15000;
+  try {
+    const saved = Number(sessionStorage.getItem(D26_POLL_STORAGE_KEY));
+    if ([5, 10, 15].includes(saved)) POLL_INTERVAL_MS = saved * 1000;
+  } catch (_) {}
+  window.MIKOSHI_POLL_INTERVAL_SECONDS = POLL_INTERVAL_MS / 1000;
   const SYSTEM_VERSION = 'RC3-D2.5';
   const PUBLIC_RELEASE = 'RC3-D2.6m';
   let currentNoticeId = null;
@@ -896,6 +903,24 @@
       responseTimer = null;
     }
   }
+
+  // Selecting an interval reschedules only an idle, successful poll.
+  // A live request is never interrupted; error-retry backoff is retained.
+  window.MIKOSHI_SET_POLL_INTERVAL = function(seconds) {
+    seconds = Number(seconds);
+    if (![5, 10, 15].includes(seconds)) return false;
+    POLL_INTERVAL_MS = seconds * 1000;
+    window.MIKOSHI_POLL_INTERVAL_SECONDS = seconds;
+    try { sessionStorage.setItem(D26_POLL_STORAGE_KEY, String(seconds)); } catch (_) {}
+    if (pollTimer && !requestInFlight &&
+        window.MIKOSHI_POLL_STATUS && window.MIKOSHI_POLL_STATUS.phase === 'waiting') {
+      scheduleNext();
+    }
+    window.dispatchEvent(new CustomEvent('mikoshi-poll-interval-selected', {
+      detail: { seconds }
+    }));
+    return true;
+  };
 
   function scheduleNext(delayMs = POLL_INTERVAL_MS) {
     if (pollTimer) clearTimeout(pollTimer);
