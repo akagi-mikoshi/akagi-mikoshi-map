@@ -239,7 +239,20 @@
         var distance = s.progressMeters === null ? '—' : Math.round(s.progressMeters) + 'm';
         html += '<p><strong>第' + Number(s.id) + '区間：</strong>' + distance + ' / ' + Math.round(s.lengthMeters) + 'm （' + pct + '）</p>';
       });
-      html += '<p>※この数値は現在の表示用アルゴリズムの判定です。GPSの実際の通過を証明するものではありません。シミュレーション停止・初期化後は記録が消えます。</p>';
+      var net = window.MIKOSHI_STAGING_NETWORK;
+      html += '<p><strong>検証用・地図通信の履歴</strong></p>';
+      if (net && Array.isArray(net.events) && net.events.length) {
+        html += '<p>取得成功：' + net.successes + '回、失敗：' + net.failures + '回（この画面を開いてから）</p>';
+        net.events.slice(0, 8).forEach(function (e) {
+          var clock = new Date(e.time).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          var elapsed = e.elapsedMs === null ? '—' : (e.elapsedMs / 1000).toFixed(1) + '秒';
+          var change = e.added === null ? '—' : '+' + e.added + '点';
+          html += '<p>' + clock + ' ｜ ' + e.status + ' ｜ 応答' + elapsed + ' ｜ 新規経路' + change + '</p>';
+        });
+      } else {
+        html += '<p>まだ通信の履歴がありません。</p>';
+      }
+      html += '<p>※この数値は現在の表示用アルゴリズムの判定です。GPSの実際の通過を証明するものではありません。通信履歴はブラウザ内のみで保持し、再読み込みすると消えます。</p>';
       openDialog('区間別の通過判定【検証用】', html);
       return;
     }
