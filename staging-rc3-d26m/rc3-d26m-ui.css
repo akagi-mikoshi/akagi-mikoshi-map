@@ -143,3 +143,12 @@
 .d26-share-label{display:block;margin:8px 0 5px;font-size:13px;font-weight:bold;color:#4c3e38}
 .d26-share-url{box-sizing:border-box;display:block;width:100%;max-width:100%;padding:10px 8px;border:1px solid #c4bcb4;border-radius:6px;color:#292521;background:#f8f7f6;font:12px/1.5 sans-serif}
 .d26-share-status{min-height:1.5em;color:#5c4e42;font-size:12px;text-align:center}
+
+/* Footer: progress towards the actual next API request, not GPS fix delivery. */
+.d26-footer{position:relative;padding-bottom:calc(6px + env(safe-area-inset-bottom,0px))}
+.d26-poll-meter{position:absolute;left:0;right:0;bottom:0;height:4px;overflow:hidden;background:#e7ece7;pointer-events:none}
+.d26-poll-meter-fill{display:block;width:0;height:100%;background:#426d51;transition:width .2s linear}
+.d26-poll-meter.d26-poll-requesting .d26-poll-meter-fill{animation:d26-poll-blink 1s ease-in-out infinite}
+.d26-poll-meter.d26-poll-retry .d26-poll-meter-fill{background:#b38d38}
+@keyframes d26-poll-blink{0%,100%{opacity:1}50%{opacity:.35}}
+@media(prefers-reduced-motion:reduce){.d26-poll-meter-fill{transition:none!important;animation:none!important}}
