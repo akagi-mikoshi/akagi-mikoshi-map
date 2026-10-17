@@ -1198,8 +1198,8 @@
   function gpsTime_(value) {
     if (value === null || value === undefined || value === '') return '—';
     const text = String(value).trim();
-    if (/^\\d{10}$/.test(text)) return jpTime(new Date(Number(text) * 1000).toISOString());
-    if (/^\\d{13}$/.test(text)) return jpTime(new Date(Number(text)).toISOString());
+    if (/^\d{10}$/.test(text)) return jpTime(new Date(Number(text) * 1000).toISOString());
+    if (/^\d{13}$/.test(text)) return jpTime(new Date(Number(text)).toISOString());
     return jpTime(text);
   }
 
